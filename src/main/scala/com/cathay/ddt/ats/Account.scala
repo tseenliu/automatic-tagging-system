@@ -63,10 +63,10 @@ object Account {
 
 }
 
-class Account extends PersistentFSM[Account.State, Account.Data, Account.DomainEvent] {
+class Account(id: String) extends PersistentFSM[Account.State, Account.Data, Account.DomainEvent] {
   import Account._
 
-  override def persistenceId: String = "account"
+  override def persistenceId: String = id
 
   override def applyEvent(evt: DomainEvent, currentData: Data): Data = {
     evt match {
@@ -94,7 +94,10 @@ class Account extends PersistentFSM[Account.State, Account.Data, Account.DomainE
   when(Empty){
     case Event(Operation(amount, CR), _) =>
       println(s"Hi, It's your first Credit Operation.")
-      goto(Active) applying AcceptedTransaction(amount, CR)
+      goto(Active) applying AcceptedTransaction(amount, CR) andThen { _ =>
+        saveStateSnapshot()
+      }
+
     case Event(Operation(amount, DR), _) =>
       println(s"Sorry your account has zero balance.")
       stay applying RejectedTransaction(amount, DR, "Balance is Zero")
@@ -102,7 +105,9 @@ class Account extends PersistentFSM[Account.State, Account.Data, Account.DomainE
 
   when(Active){
     case Event(Operation(amount, CR), _) =>
-      stay applying AcceptedTransaction(amount, CR)
+      stay applying AcceptedTransaction(amount, CR) andThen { _ =>
+        saveStateSnapshot()
+      }
     case Event(Operation(amount, DR), balance) =>
       val newBalance = balance.amount - amount
       if(newBalance > 0){

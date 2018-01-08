@@ -14,74 +14,86 @@ import com.typesafe.config.{Config, ConfigFactory}
   */
 object SqlParser extends EnvLoader {
 
-  val filename = "/Users/Tse-En/Desktop/frontier_mapping"
-  var mappingList = new ListBuffer[(String, SimpleTagMessage)]()
-  var mapTable: Map[String, SimpleTagMessage] = Map()
-
-
   // test
-  val a = TagMessage("frontier-adw", "D", "event_cc_txn_m", yyyymm = Some("201801"), finish_time = System.currentTimeMillis())
-  val b = TagMessage("frontier-adw", "M", "event_bp_point_m", yyyymm = Some("201712"), finish_time = System.currentTimeMillis())
-  val c = TagMessage("frontier-adw", "D", "rd_a", yyyymmdd = Some("20180102"), finish_time = System.currentTimeMillis())
-  val d = TagMessage("frontier-adw", "D", "rd_b", yyyymmdd = Some("20180101"), finish_time = System.currentTimeMillis())
-  val e = TagMessage("frontier-adw", "D", "rd_c", yyyymmdd = Some("20180103"), finish_time = System.currentTimeMillis())
-  // test
+//  val a = TagMessage("frontier-adw", "D", "event_cc_txn_m", yyyymm = Some("201801"), finish_time = System.currentTimeMillis())
+//  val b = TagMessage("frontier-adw", "M", "event_bp_point_m", yyyymm = Some("201712"), finish_time = System.currentTimeMillis())
+//  val c = TagMessage("frontier-adw", "D", "rd_a", yyyymmdd = Some("20180102"), finish_time = System.currentTimeMillis())
+//  val d = TagMessage("frontier-adw", "D", "rd_b", yyyymmdd = Some("20180101"), finish_time = System.currentTimeMillis())
+//  val e = TagMessage("frontier-adw", "D", "rd_c", yyyymmdd = Some("20180103"), finish_time = System.currentTimeMillis())
+//  def getTagMessages(doc: TagDictionary): Iterator[TagMessage] = {
+//    Iterator(a,b,c,d,e)
+//  }
 
-  def getTagMessages(doc: TagDictionary): Iterator[TagMessage] = {
-    Iterator(a,b,c,d,e)
-  }
+  val mappingFilePath = "/Users/Tse-En/Desktop/frontier_mapping"
+  var sqlMList = new ListBuffer[(String, Message)]()
+  var kafkaMList = new ListBuffer[(String, String)]()
+  var sqlMTable: Map[String, Message] = Map()
+  var kafaMTable: Map[String, String] = Map()
+
+  // Convert to tagMessages using a mapping table
+  def CovertTagMessage(doc: TagDictionary): Unit = { }
+
+  // Convert frontier messages to tagMessages
+  def CovertTagMessage(input: FrontierMessage, output: TagMessage): Unit = {}
+
 
   def getTagMessages(sql: String): Iterator[Message] = {
-    val mt = getMappingTable
+    val map = getSqlMTable
     Iterator(
-      mt("event_cc_txn"),
-      mt("event_bp_point"),
-      mt("rd_a"),
-      mt("rd_b"),
-      mt("rd_c"))
+      map("event_cc_txn"),
+      map("event_bp_point"),
+      map("rd_a"))
 //    Iterator(a.getDefaultTM,b.getDefaultTM,c.getDefaultTM,d.getDefaultTM,e.getDefaultTM)
   }
 
-  // Convert to tagMessages using a mapping table
-  def CovertTagMessages(doc: TagDictionary): Unit = {
-
-  }
-
   // Convert frontier messages to tagMessages
-  def CovertTagMessages(input: FrontierMessage, output: TagMessage): Unit = {
-
-  }
-
-  // Convert frontier messages to tagMessages
-  def CovertTagMessages(topic: String, message: TagMessageTest): TagMessage = {
-    val mt = getMappingTable
-    val result = mt(message.value)
-    val tagMessage = TagMessage(
+  def CovertTagMessage(topic: String, message: TagMessageTest): TagMessage = {
+    val map = getkafkaMTable
+    val frequency = map(message.value)
+    TagMessage(
       topic,
-      result.update_frequency,
-      result.value,
+      frequency,
+      message.value,
       message.yyyymm,
       message.yyyymmdd,
       message.finish_time)
-    tagMessage
   }
 
-  def getMappingTable: Map[String, SimpleTagMessage] = {
-    if (mapTable.isEmpty) {
-      for (line <- Source.fromFile(filename).getLines) {
-        val record = line.trim.split(",")
-        val tmp = record(1).split(" ")
-        mappingList += ((record(0), SimpleTagMessage(tmp(1), tmp(0))))
-      }
-      mapTable = mappingList.toMap
-      mapTable
+  def getSqlMTable: Map[String, Message] = {
+    if (sqlMTable.isEmpty) {
+      initialFromLocal()
+      sqlMTable
     } else {
-      mapTable
+      sqlMTable
     }
   }
 
+  def getkafkaMTable: Map[String, String] = {
+    if (kafaMTable.isEmpty) {
+      initialFromLocal()
+      kafaMTable
+    } else {
+      kafaMTable
+    }
+  }
+
+  def initialFromLocal(): Unit = {
+    sqlMTable = Map()
+    kafaMTable = Map()
+    for (line <- Source.fromFile(mappingFilePath).getLines) {
+      val record = line.trim.split(",")
+      val key = record(0)
+      val value = record(1)
+      val tmp = value.split(" ")
+      kafkaMList += ((tmp(0), tmp(1)))
+      sqlMList += ((key, SimpleTagMessage(tmp(1), tmp(0))))
+    }
+    sqlMTable = sqlMList.toMap
+    kafaMTable = kafkaMList.toMap
+  }
+
   def print(): Unit = {
-    val m = getMappingTable
+    val m = getSqlMTable
     m.foreach(println(_))
   }
 

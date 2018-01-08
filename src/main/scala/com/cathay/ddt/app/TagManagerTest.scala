@@ -41,8 +41,8 @@ object TagManagerTest extends App with EnvLoader {
   //tagManager ! Cmd(Load(tagDic))
   //tagManager ! "print"
 
-  val reporterConfig = getConfig("tag")
-  val tagManagerRef = TagManager.initiate(reporterConfig)
+  val kafkaConfig = getConfig("kafka")
+  val tagManagerRef = TagManager.initiate(kafkaConfig)
 //  TagManager.exportToRegistries(tagManagerRef)
   tagManagerRef ! "print"
 

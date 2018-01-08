@@ -1,10 +1,9 @@
 package com.cathay.ddt.ats
 
-import java.io.File
-
 import akka.persistence._
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import akka.actor.{ActorLogging, ActorRef, ActorSystem, Props}
+import com.cathay.ddt.ats.Account.{CR, DR, Operation}
 import com.cathay.ddt.kafka.MessageConsumer
 import com.cathay.ddt.tagging.schema.{TagDictionary, TagMessage}
 import com.cathay.ddt.tagging.schema.TagMessage.Message
@@ -27,11 +26,8 @@ object TagManager {
   //sealed trait TIOperation extends ManagerOperation
   case class TagRegister(id: String) extends ManagerOperation
   case class TagMesAdded(id: String, tagMessage: Message) extends ManagerOperation
+  case class TagMesUpdated(ti: TagInstance, actorRef: ActorRef) extends ManagerOperation
   case class TagInsRemoved(id: String) extends ManagerOperation
-
-//  sealed trait TMOperation extends ManagerOperation
-//  case class TagMesAdded(id: String, tagMessage: TagMessage) extends TMOperation
-//  case class TagMesRemoved(id: String) extends TMOperation
 
   case class Cmd(op: ManagerCommand)
   case class Evt(op: ManagerOperation)
@@ -40,16 +36,19 @@ object TagManager {
   case class TagInstance(id: String, actor: Option[ActorRef]=None) {
     def isActive: Boolean = actor.isDefined
   }
+
   case class TIsRegistry(state: Map[TagInstance, Set[Message]] = Map()) {
     def count: Int = state.size
 
     def register(id: String): TIsRegistry = TIsRegistry(state + (TagInstance(id) -> Set()))
 
-    def hasRegistered(id: String): Boolean = {
+    def contains(id: String): Boolean = {
       val tagIns = getTagIns(id).orNull
       if (tagIns == null) false
       else state.contains(tagIns)
     }
+
+    def getTagMess(ti: TagInstance): Set[Message] = state(ti)
 
     def getTagIns(id: String): Option[TagInstance] = {
       //      val tagIns = state.keySet.filter( x => x.id == id )
@@ -61,14 +60,25 @@ object TagManager {
       val tagIns = getTagIns(id).get
       val newSet = state(tagIns) ++ Set(tagMessage)
       TIsRegistry(state + (tagIns -> newSet))
-//      (state - tagIns) + (tagIns -> newSet)
     }
 
-    def remove(id: String) = getTagIns(id).getOrElse("error")
+    def update(oldTI: TagInstance, newTI: TagInstance): TIsRegistry = {
+      val messageSet = state(oldTI)
+      val newState = state - oldTI + (newTI -> messageSet)
+      TIsRegistry(newState)
+    }
 
+
+
+    // test
+    def remove(id: String) = getTagIns(id).getOrElse("error")
   }
 
   case class TMsRegistry(state: Map[Message, Set[TagInstance]] = Map()) {
+    def contains(message: Message): Boolean = state.contains(message)
+
+    def getTagInsts(message: Message): Set[TagInstance] = state(message)
+
     def add(tagMessage: Message, tagInst: TagInstance): TMsRegistry = {
       if(!state.contains(tagMessage)) {
         TMsRegistry(state + (tagMessage -> Set(tagInst)))
@@ -77,23 +87,48 @@ object TagManager {
         TMsRegistry(state + (tagMessage -> newSet))
       }
     }
+
+    def update(messages: Set[Message], oldTI: TagInstance, newTI: TagInstance): TMsRegistry = {
+      var newState: Map[Message, Set[TagInstance]] = state
+      messages.foldLeft(this){ (registry, mes) =>
+        val newSet = newState(mes) - oldTI + newTI
+        newState = newState + (mes -> newSet)
+        TMsRegistry(newState)
+      }
+//      var newState: Map[Message, Set[TagInstance]] = state
+//      messages.foreach { mes =>
+//        val newSet = newState(mes) - oldTI + newTI
+//        newState = newState + (mes -> newSet)
+//        println("%%%", newState)
+//      }
+//      TMsRegistry(newState)
+    }
   }
 
   case class State(tagInstReg: TIsRegistry, tagMesReg: TMsRegistry) {
     def register(id: String): State = State(tagInstReg.register(id), tagMesReg)
-    def hasRegistered(tagDic: TagDictionary): Boolean = tagInstReg.hasRegistered(tagDic.actorID)
+    def contains(tagDic: TagDictionary): Boolean = tagInstReg.contains(tagDic.actorID)
+    def contains(message: Message): Boolean = tagMesReg.contains(message)
     def addTagMes(id: String, tagMessage: Message): State =
       State(
         tagInstReg.add(id, tagMessage),
         tagMesReg.add(tagMessage, tagInstReg.getTagIns(id).get)
       )
+
+    def getTagInsts(message: Message): Set[TagInstance] = tagMesReg.getTagInsts(message)
+    def update(oldTI: TagInstance, actor: ActorRef): State = {
+      val newTI = TagInstance(oldTI.id, Some(actor))
+      State(
+        tagInstReg.update(oldTI, newTI),
+        tagMesReg.update(tagInstReg.getTagMess(oldTI), oldTI, newTI))
+    }
   }
 
 
 
-  def initiate(tagClientConf: Config): ActorRef = {
+  def initiate(kafkaConfig: Config): ActorRef = {
     val system = ActorSystem("tag")
-    system.actorOf(Props(new TagManager(tagClientConf)), name="tag-manager")
+    system.actorOf(Props(new TagManager(kafkaConfig)), name="tag-manager")
   }
 
   def exportToRegistries(tagManager: ActorRef) = {
@@ -111,15 +146,11 @@ object TagManager {
 
 }
 
-class TagManager(tagClientConf: Config) extends PersistentActor with ActorLogging {
+class TagManager(kafkaConfig: Config) extends PersistentActor with ActorLogging {
   import TagManager._
 
   var state: State = State(TIsRegistry(), TMsRegistry())
-
-//  val kafkaActor = context.actorOf(Props(new MessageConsumer(tagClientConf)), name = "")
-  val config = ConfigFactory.parseFile(new File(s"config/tag.conf"))
-  val kafkaActor = context.actorOf(Props(new MessageConsumer(config)), "kafka-test")
-
+  val kafkaActor = context.actorOf(Props(new MessageConsumer(kafkaConfig)), "kafka-test")
 
   val DATABASE = "tag"
   val SCORETAG_COLLECTION = "scoretag"
@@ -142,6 +173,8 @@ class TagManager(tagClientConf: Config) extends PersistentActor with ActorLoggin
     case Evt(TagMesAdded(id, message)) =>
       state = state.addTagMes(id, message)
       //takeSnapshot
+    case Evt(TagMesUpdated(ti, actorRef)) =>
+      state = state.update(ti, actorRef)
   }
 
   // Persistent receive on recovery mood
@@ -153,6 +186,12 @@ class TagManager(tagClientConf: Config) extends PersistentActor with ActorLoggin
       println(s"Counter receive snapshot with data: $snapshot on recovering mood")
       state = snapshot
     case RecoveryCompleted =>
+      state.tagInstReg.state.keySet.foreach { ti =>
+        if (ti.isActive) {
+          val actorRef = context.actorOf(Props(new Account(ti.id)) ,name = ti.id)
+          state = state.update(ti, actorRef)
+        }
+      }
       println(s"Recovery Complete and Now I'll swtich to receiving mode :)")
 
   }
@@ -161,7 +200,7 @@ class TagManager(tagClientConf: Config) extends PersistentActor with ActorLoggin
   val receiveCommand: Receive = {
     case cmd @ Cmd(Load(tagDic)) =>
       // println(s"TagManager receive $cmd")
-      if (!state.hasRegistered(tagDic)) {
+      if (!state.contains(tagDic)) {
         // register
         persist(Evt(TagRegister(tagDic.actorID))) { evt =>
           updateState(evt)
@@ -173,15 +212,28 @@ class TagManager(tagClientConf: Config) extends PersistentActor with ActorLoggin
             updateState(evt)
           }
         }
-      } else {
+      } else{
         println(s"${tagDic._id} is already exist.")
       }
 
-    case message: TagMessage  =>
-      println(message)
-      println(message.getDefaultTM)
-      val a = context.actorOf(Props[Account])
+    case tagMessage: TagMessage  =>
+      val message = tagMessage.getDefaultTM
 
+      if (state.contains(message)) {
+        state.getTagInsts(message).foreach { ti =>
+          if (ti.isActive) {
+            ti.actor.get ! Operation(1000, CR)
+          } else{
+            val actorRef = context.actorOf(Props(new Account(ti.id)) ,name = ti.id)
+            actorRef ! Operation(1000, CR)
+//            state.update(ti, actorRef)
+            persist(Evt(TagMesUpdated(ti, actorRef))) { evt =>
+              updateState(evt)
+            }
+          }
+
+        }
+      }
 
     case "print" =>
       saveSnapshot(state)

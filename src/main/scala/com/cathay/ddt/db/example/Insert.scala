@@ -15,7 +15,7 @@ object Insert extends App {
   val connection1 = MongoConnector.connection
   val FBsonCollection = MongoConnector.dbFromConnection(connection1, "tag", "scoretag")
 
-  for ( i <- 10 to 150 ) {
+  for ( i <- 10 to 30 ) {
     if (i % 10 == 0) {
       val tmp = TagDictionary(
         channel_type = "bank",

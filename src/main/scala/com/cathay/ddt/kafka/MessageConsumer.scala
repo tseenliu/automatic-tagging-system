@@ -8,15 +8,14 @@ import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.StringDeserializer
 import spray.json._
 import TagJsonProtocol._
-import com.cathay.ddt.ats.SqlParser
+import com.cathay.ddt.ats.{EnvLoader, SqlParser}
 import com.cathay.ddt.tagging.schema.TagMessage
 /**
   * Created by Tse-En on 2017/12/23.
   */
-class MessageConsumer(config: Config) extends Actor with ActorLogging {
-
-  private val consumerConf = config.getConfig("kafka.consumer")
-  private val topics: Array[String] = config.getStringList("hippo.subscribe-topics").toArray().map(_.toString)
+class MessageConsumer(kafkaConfig: Config) extends Actor with ActorLogging with EnvLoader {
+  private val consumerConf = kafkaConfig.getConfig("kafka.consumer")
+  private val topics: Array[String] = kafkaConfig.getStringList("tag.subscribe-topics").toArray().map(_.toString)
 
   // Records' type of [key, value]
   val recordsExt = ConsumerRecords.extractor[String, String]
@@ -27,7 +26,7 @@ class MessageConsumer(config: Config) extends Actor with ActorLogging {
       new StringDeserializer,
       new StringDeserializer,
       self
-    ), "Reporter"
+    ), "Tag-Reporter"
   )
   consumer ! Subscribe.AutoPartition(topics)
   context.watch(consumer)
@@ -58,7 +57,7 @@ class MessageConsumer(config: Config) extends Actor with ActorLogging {
           case tagM if tagM.contains("kafkaTopic") & tagM.contains("update_frequency") =>
             println(tagM)
             val message: TagMessageTest = tagM.parseJson.convertTo[TagMessageTest]
-            val tagMessage = SqlParser.CovertTagMessages(r.topic(), message)
+            val tagMessage = SqlParser.CovertTagMessage(r.topic(), message)
             context.parent ! tagMessage
         }
       } catch {

@@ -11,7 +11,7 @@ object ActorTest extends App {
 
   val system = ActorSystem("persistent-fsm-actors")
 
-  val account = system.actorOf(Props[Account])
+  val account = system.actorOf(Props(new Account("1")))
 
   account ! Operation(1000, CR)
 
