@@ -1,20 +1,42 @@
 package com.cathay.ddt.ats
 
 import akka.persistence._
-import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import akka.actor.{ActorLogging, ActorRef, ActorSystem, Props}
-import com.cathay.ddt.ats.Account.{CR, DR, Operation}
+
+import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import com.cathay.ddt.kafka.MessageConsumer
 import com.cathay.ddt.tagging.schema.{TagDictionary, TagMessage}
 import com.cathay.ddt.tagging.schema.TagMessage.Message
+
 import reactivemongo.bson.BSONDocument
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.Config
+
+import com.cathay.ddt.ats.Account.{CR, DR, Operation}
 
 /**
   * Created by Tse-En on 2017/12/17.
   */
 
 object TagManager {
+
+  def initiate(kafkaConfig: Config): ActorRef = {
+    val system = ActorSystem("tag")
+    system.actorOf(Props(new TagManager(kafkaConfig)), name="tag-manager")
+  }
+
+  def exportToRegistries(tagManager: ActorRef) = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    val connection1 = MongoConnector.connection
+    val FBsonCollection = MongoConnector.dbFromConnection(connection1, "tag", "scoretag")
+    val query = BSONDocument("attribute" -> "behavior")
+    FBsonCollection.flatMap(scoreTagColl => MongoUtils.getScoreTDs(scoreTagColl, query)).map { docList =>
+      for (doc <- docList) {
+        //println(doc)
+        tagManager ! Cmd(Load(doc))
+      }
+    }
+  }
+
   // TagManager State Operation
   sealed trait ManagerCommand
   case class Load(doc: TagDictionary) extends ManagerCommand
@@ -51,8 +73,6 @@ object TagManager {
     def getTagMess(ti: TagInstance): Set[Message] = state(ti)
 
     def getTagIns(id: String): Option[TagInstance] = {
-      //      val tagIns = state.keySet.filter( x => x.id == id )
-      //      tagIns.headOption
       state.keySet.find(tagIns => tagIns.id == id)
     }
 
@@ -121,26 +141,6 @@ object TagManager {
       State(
         tagInstReg.update(oldTI, newTI),
         tagMesReg.update(tagInstReg.getTagMess(oldTI), oldTI, newTI))
-    }
-  }
-
-
-
-  def initiate(kafkaConfig: Config): ActorRef = {
-    val system = ActorSystem("tag")
-    system.actorOf(Props(new TagManager(kafkaConfig)), name="tag-manager")
-  }
-
-  def exportToRegistries(tagManager: ActorRef) = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-    val connection1 = MongoConnector.connection
-    val FBsonCollection = MongoConnector.dbFromConnection(connection1, "tag", "scoretag")
-    val query = BSONDocument("attribute" -> "behavior")
-    FBsonCollection.flatMap(scoreTagColl => MongoUtils.getScoreTDs(scoreTagColl, query)).map { docList =>
-      for (doc <- docList) {
-        //println(doc)
-        tagManager ! Cmd(Load(doc))
-      }
     }
   }
 
