@@ -33,12 +33,21 @@ object example extends App {
 //    """.stripMargin)
 //  df.show
 
+  val tmp =
+    s"""
+       |select
+       |*
+       |from travel
+       |where txn_date =      "2017-03-27
+     """.stripMargin.trim
+  println(tmp)
+
   val df = spark.sql(
     """
       |select
       |*
       |from travel
-      |where txn_date between "2017-03-27" AND "2017-05-27"
+      |where txn_date =         "2017-03-27"
     """.stripMargin)
   df.show
 }

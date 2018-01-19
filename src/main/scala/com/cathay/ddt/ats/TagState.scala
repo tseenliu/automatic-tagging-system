@@ -6,7 +6,7 @@ import akka.persistence.fsm._
 import akka.persistence.fsm.PersistentFSM.FSMState
 import com.cathay.ddt.ats.TagManager.{Cmd, Delete}
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
-import com.cathay.ddt.tagging.schema.{TagDictionary, TagMessage}
+import com.cathay.ddt.tagging.schema.{CustomerDictionary, TagMessage}
 import com.cathay.ddt.tagging.schema.TagMessage.{Message, SimpleTagMessage}
 import com.cathay.ddt.utils.CalendarConverter
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
@@ -60,6 +60,14 @@ object TagState {
 
       d && m
     }
+
+    def isMonthlyNull: Boolean = {
+      val isFalse: Boolean = monthly.values.toSet.head
+      if(monthly.values.toSet.size == 1 && !isFalse) {
+        true
+      }else false
+    }
+
   }
 
   case object ZeroMetadata extends Data {
@@ -68,6 +76,7 @@ object TagState {
   }
 
   case class Metadata(override val daily: Map[String, Boolean], override val monthly: Map[String, Boolean]) extends Data {
+    var monthlyAlreadyRun = false
     override def toString: String = {
       s"daily: $daily\nmonthly: $monthly"
     }
@@ -82,6 +91,8 @@ object TagState {
   case class ReceivedMessage(tagMessage: TagMessage, `type`: FrequencyType) extends DomainEvent
 
   case class UpdatedMessages(`type`: FrequencyType) extends DomainEvent
+
+  case class RanMonthly(isRun: Boolean) extends DomainEvent
 
 
   // Frequency Types
@@ -104,6 +115,14 @@ object TagState {
 
 class TagState(frequency: String, id: String) extends PersistentFSM[TagState.State, TagState.Data, TagState.DomainEvent] with CalendarConverter {
   import TagState._
+
+  override def preStart(): Unit = {
+    println(s"[Info] Tag $frequency, $id is already serving...")
+  }
+
+  override def postStop(): Unit = {
+    println(s"[Info] Tag $frequency, $id is already stopping...")
+  }
 
   override def persistenceId: String = id
 
@@ -180,6 +199,15 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
       case UpdatedMessages(Monthly) =>
         Metadata(resetDaily, resetMonthly)
 
+      case RanMonthly(isRun) =>
+        if(isRun) {
+          currentData.asInstanceOf[Metadata].monthlyAlreadyRun = true
+          currentData
+        }else {
+          currentData.asInstanceOf[Metadata].monthlyAlreadyRun = false
+          currentData
+        }
+
     }
   }
 
@@ -235,11 +263,18 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
     case Event(Launch, _) =>
       frequency match {
         case "M" =>
-          if(getCurrentDate == getDayOfMonth(numsOfDelayDate)) {
-            // run
+          if(!stateData.asInstanceOf[Metadata].monthlyAlreadyRun) {
             // sender ! ???
+
+            // run
+            RanMonthly(true)
             println(getComposedSql)
           }
+//          else {
+//            goto(Verifying) andThen { _ =>
+//              self ! Stop
+//            }
+//          }
           goto(Verifying) applying UpdatedMessages(Monthly) andThen { _ =>
             self ! Check
           }
@@ -257,7 +292,7 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
 
   when(Verifying){
     case Event(Check, metadata) =>
-      if(metadata.isNull) {
+      if(metadata.isMonthlyNull) {
         context.parent ! Cmd(Delete(id))
         self ! Stop
         stay()
@@ -266,8 +301,11 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
       }
 
     case Event(Stop, _) =>
-      clearPersistentData()
       stop()
+
+//    case Event(Remove, _) =>
+//      clearPersistentData()
+//      stop()
 
   }
 
@@ -276,26 +314,29 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
     deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr = lastSequenceNr))
   }
 
-  def getDictionary: Future[TagDictionary] = {
+  def getDictionary: Future[CustomerDictionary] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     val query = BSONDocument("_id" -> BSONObjectID(id))
-    MongoConnector.getTDCollection.flatMap(x => MongoUtils.findOneDictionary(x, query))
+    MongoConnector.getCDCollection.flatMap(x => MongoUtils.findOneDictionary(x, query))
   }
 
   def getComposedSql: String = {
     val dic = Await.result(getDictionary, 1 second)
-    val startDate = getStartWithDate(dic.started)
-    val endDate = getEndWithDate(startDate, dic.traced)
+    val startDate = getStartWithDate(dic.started.get)
+    val endDate = getEndWithDate(startDate, dic.traced.get)
     dic.sql.replaceAll("\\$start_date", startDate).replaceAll("\\$end_date", endDate)
   }
 
-//  onTransition {
-//    case Receiving -> Receiving =>
-//      self ! Retry
-//      if(stateData.isReady) {
-//        goto(Loading)
-//      }
-//  }
+  onTransition {
+    case _ -> Verifying =>
+      if(getCurrentDate == getDayOfMonth(1)) {
+        goto(Receiving) applying RanMonthly(false)
+      } else if(stateData.asInstanceOf[Metadata].monthlyAlreadyRun) {
+        context.parent ! Cmd(Delete(id))
+        self ! Stop
+        stay()
+      } else goto(Receiving)
+  }
 
   whenUnhandled {
     case Event(SaveSnapshotSuccess(metadata), _) ⇒

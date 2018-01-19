@@ -2,7 +2,7 @@ package com.cathay.ddt.utils
 
 import com.cathay.ddt.kafka.{FrontierMessage, TagFinishMessage}
 import com.cathay.ddt.tagging.schema.TagMessage.{Message, SimpleTagMessage}
-import com.cathay.ddt.tagging.schema.{TagDictionary, TagMessage}
+import com.cathay.ddt.tagging.schema.{CustomerDictionary, TagMessage}
 
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
@@ -34,7 +34,7 @@ object MessageConverter extends CalendarConverter with EnvLoader {
   }
 
   // Convert to tagMessages using a mapping table
-  def CovertTagMessage(doc: TagDictionary): Unit = { }
+  def CovertTagMessage(doc: CustomerDictionary): Unit = { }
 
 
   // Convert frontier messages to tagMessages
@@ -97,7 +97,7 @@ object MessageConverter extends CalendarConverter with EnvLoader {
 
   // parsing sql and get require value
   def getMessages(sql: String): Iterator[Message] = {
-    val tablePattern = "(VP_BANK|vp_bank)\\.([a-z\\-\\_A-Z]+)".r
+    val tablePattern = "(tag_id)\\=([a-z\\-\\_A-Z]+)".r
     val matches = tablePattern.findAllIn(sql)
     val map = getSqlMTable
     var set = scala.collection.mutable.Set[Message]()

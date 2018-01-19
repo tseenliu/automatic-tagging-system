@@ -15,14 +15,10 @@ object MongoConnector extends EnvLoader{
   val tagConfig = getConfig("ats")
   val MONGO_SERVER = tagConfig.getString("ats.mongo.server")
   val ATS_DB = tagConfig.getString("ats.mongo.db-name")
-  val TAG_DICT= tagConfig.getString("ats.mongo.tag-collection")
   val CUSTOMER_DICT= tagConfig.getString("ats.mongo.customer-collection")
 
   val driver: MongoDriver = new MongoDriver
   val connection: MongoConnection = driver.connection(List(MONGO_SERVER))
-
-
-  def getTDCollection = dbFromConnection(connection, ATS_DB, TAG_DICT)
 
   def getCDCollection = dbFromConnection(connection, ATS_DB, CUSTOMER_DICT)
 
