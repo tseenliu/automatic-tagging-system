@@ -54,14 +54,27 @@ object MongoUtils {
 
 
 
-
-
   /* Find Documents */
-  def getScoreTDs(collection: BSONCollection, query: BSONDocument)(implicit ec: ExecutionContext): Future[List[TagDictionary]] = {
+  def findDictionaries(collection: BSONCollection, query: BSONDocument)(implicit ec: ExecutionContext): Future[List[TagDictionary]] = {
     implicit val reader = Macros.reader[TagDictionary]
-    //implicit val writer = Macros.writer[ICustomer]
     collection.find(query).cursor[TagDictionary]().collect[List]()
   }
+
+  def findOneDictionary(collection: BSONCollection, query: BSONDocument)(implicit ec: ExecutionContext): Future[TagDictionary] = {
+    implicit val reader = Macros.reader[TagDictionary]
+    collection.find(query).requireOne[TagDictionary]
+  }
+
+
+
+
+
+
+
+
+
+
+
 
 //  def getQueryOfIcustomer(): Future[List[BSONDocument]] = {
 //    def query(collection: BSONCollection): Future[List[BSONDocument]] = {

@@ -15,17 +15,19 @@ object Query extends App {
   val connection1 = MongoConnector.connection
   val FBsonCollection = MongoConnector.dbFromConnection(connection1, "tag", "scoretag")
 
-  //val tmp = TagManager.initiate()
+//  val query = BSONDocument("attribute" -> "behavior")
+//  FBsonCollection.flatMap( scoreTagColl=> MongoUtils.findDictionaries(scoreTagColl, query)).map { docList =>
+//    for ( doc <- docList) {
+//      println(doc)
+//      //println(doc.actorID)
+//      //tmp ! Cmd(TagAdded(doc))
+//    }
+//  }
 
-  val query = BSONDocument("attribute" -> "behavior")
-  FBsonCollection.flatMap( scoreTagColl=> MongoUtils.getScoreTDs(scoreTagColl, query)).map { docList =>
-    for ( doc <- docList) {
-      println(doc)
-      //println(doc.actorID)
-      //tmp ! Cmd(TagAdded(doc))
-    }
+  val query2 = BSONDocument("_id" -> BSONObjectID("5a59f9a90100000100d0215b"))
+  FBsonCollection.flatMap(x => MongoUtils.findOneDictionary(x, query2)).map { docList =>
+    println(docList)
   }
-
   //  val transql = FBsonCollection.flatMap( personColl=> MongoUtils.findOne(personColl, query)).map { doc =>
   //
   //    val id = doc.get.getAs[BSONObjectID]("_id").getOrElse(BSONObjectID)

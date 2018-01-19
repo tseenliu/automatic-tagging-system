@@ -1,10 +1,8 @@
 package com.cathay.ddt.app
 
-import akka.persistence._
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import com.cathay.ddt.ats.TagManager.{Cmd, Load}
+import com.cathay.ddt.ats.TagManager.{Cmd, ShowState}
 import com.cathay.ddt.ats._
-import com.cathay.ddt.tagging.schema.{TagDictionary, TagMessage}
+import com.cathay.ddt.utils.EnvLoader
 
 
 /**
@@ -43,8 +41,8 @@ object TagManagerTest extends App with EnvLoader {
 
   val kafkaConfig = getConfig("kafka")
   val tagManagerRef = TagManager.initiate(kafkaConfig)
-//  TagManager.exportToRegistries(tagManagerRef)
-  tagManagerRef ! "print"
+  Thread.sleep(5000)
+  tagManagerRef ! Cmd(ShowState)
 
 //  SqlParser.print()
 //  println(SqlParser.getMappingTable("event_bp_point"))

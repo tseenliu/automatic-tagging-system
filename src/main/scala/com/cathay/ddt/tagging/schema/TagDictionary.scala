@@ -7,20 +7,22 @@ import reactivemongo.bson.BSONObjectID
   */
 
 case class TagDictionary(_id: BSONObjectID=BSONObjectID.generate,
-                      channel_type: String,
-                      tag_type: String,
-                      tag_name: String,
-                      sql: String,
-                      update_frequency: String,
-                      started: Int,
-                      traced: Int,
-                      description: String,
-                      create_time: Long=TagDictionary.getCurrentTime,
-                      update_time: Long=TagDictionary.getCurrentTime,
-                      enable_flag: Boolean,
-                      score_option: String,
-                      attribute: String,
-                      creator: String) {
+                         channel_type: String,
+                         channel_name: String,
+                         tag_type: String,
+                         tag_name: String,
+                         sql: String,
+                         update_frequency: String,
+                         started: Int,
+                         traced: Int,
+                         description: String,
+                         create_time: Long=TagDictionary.getCurrentTime,
+                         update_time: Long=TagDictionary.getCurrentTime,
+                         enable_flag: Boolean,
+                         score_option: String,
+                         attribute: String,
+                         creator: String,
+                         is_focus: Boolean) {
   val actorID: String = _id.stringify
 }
 
@@ -38,21 +40,3 @@ object TagDictionary {
     case class StateCmdUnhandled(currentState: String) extends Response
   }
 }
-
-
-
-
-
-
-//case class ScoreTag(_id: BSONObjectID,
-//                    tag: String,
-//                    sql: String,
-//                    md: String,
-//                    started: Int,
-//                    traced: Int,
-//                    option: String) {
-//  val actorID: String = s"$tag-${ _id.stringify}"
-//}
-
-
-//case class ICustomer(id: BSONObjectID, tag: String, sql: String, start: Int, trace: Int)

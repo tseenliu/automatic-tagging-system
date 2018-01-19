@@ -1,15 +1,15 @@
 package com.cathay.ddt.kafka
 
 import akka.actor.{Actor, ActorLogging, Terminated}
-import cakesolutions.kafka.akka.{ConsumerRecords, Extractor, KafkaConsumerActor}
+import cakesolutions.kafka.akka.{ConsumerRecords, KafkaConsumerActor}
 import cakesolutions.kafka.akka.KafkaConsumerActor.{Confirm, Subscribe}
 import com.typesafe.config.Config
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.StringDeserializer
 import spray.json._
 import TagJsonProtocol._
-import com.cathay.ddt.ats.{EnvLoader, SqlParser}
-import com.cathay.ddt.tagging.schema.TagMessage
+import com.cathay.ddt.utils.{MessageConverter, EnvLoader}
+
 /**
   * Created by Tse-En on 2017/12/23.
   */
@@ -45,20 +45,17 @@ class MessageConsumer(kafkaConfig: Config) extends Actor with ActorLogging with 
     recordsList.foreach { r =>
       try {
         // Parse records in Json format
-        r.value() match {
-          case frontierM if frontierM.contains("table") & frontierM.contains("db") =>
-            println(frontierM)
-            val message: FrontierMessage = frontierM.parseJson.convertTo[FrontierMessage]
-            context.parent ! message
-          case tagFinishM if tagFinishM.contains("hippo_name") & tagFinishM.contains("job_name") =>
-            println(tagFinishM)
-            val message: TagFinishMessage = tagFinishM.parseJson.convertTo[TagFinishMessage]
-            context.parent ! message
-          case tagM if tagM.contains("kafkaTopic") & tagM.contains("update_frequency") =>
-            println(tagM)
-            val message: TagMessageTest = tagM.parseJson.convertTo[TagMessageTest]
-            val tagMessage = SqlParser.CovertTagMessage(r.topic(), message)
+        r.topic() match {
+          case "frontier-adw" =>
+            println(r.value())
+            val message: FrontierMessage = r.value().parseJson.convertTo[FrontierMessage]
+            val tagMessage = MessageConverter.CovertToTM(r.topic(), message)
             context.parent ! tagMessage
+          case "hippo-finish" =>
+            println(r.value())
+            val message: TagFinishMessage = r.value().parseJson.convertTo[TagFinishMessage]
+            val tagMessage = MessageConverter.CovertToTM(r.topic(), message)
+            context.parent ! message
         }
       } catch {
         case e: Exception =>

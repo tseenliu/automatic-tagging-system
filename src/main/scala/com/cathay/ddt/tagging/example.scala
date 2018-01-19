@@ -20,16 +20,25 @@ object example extends App {
     .enableHiveSupport()
     .getOrCreate()
 
+//  val df = spark.sql(
+//    """
+//      |select
+//      |cutsomerID,
+//      |cnt,
+//      |item,
+//      |txn_amt,
+//      |txn_date
+//      |from travel
+//      |where txn_date between date_add(cast("2017-03-27" as date), -90) AND "2017-03-27"
+//    """.stripMargin)
+//  df.show
+
   val df = spark.sql(
     """
       |select
-      |cutsomerID,
-      |cnt,
-      |item,
-      |txn_amt,
-      |txn_date
+      |*
       |from travel
-      |where txn_date between date_add(cast("2017-03-27" as date), -90) AND "2017-03-27"
+      |where txn_date between "2017-03-27" AND "2017-05-27"
     """.stripMargin)
   df.show
 }

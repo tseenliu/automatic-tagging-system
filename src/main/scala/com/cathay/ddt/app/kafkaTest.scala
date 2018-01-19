@@ -1,8 +1,8 @@
 package com.cathay.ddt.app
 
 import akka.actor.{ActorSystem, Props}
-import com.cathay.ddt.ats.EnvLoader
 import com.cathay.ddt.kafka.MessageConsumer
+import com.cathay.ddt.utils.EnvLoader
 
 /**
   * Created by Tse-En on 2017/12/26.
