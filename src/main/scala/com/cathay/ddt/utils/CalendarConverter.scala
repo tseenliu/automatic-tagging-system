@@ -3,6 +3,8 @@ package com.cathay.ddt.utils
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
+import com.cathay.ddt.ats.TagState.{Daily, FrequencyType, Monthly}
+
 /**
   * Created by Tse-En on 2018/1/14.
   */
@@ -42,7 +44,7 @@ trait CalendarConverter extends EnvLoader {
   }
 
   // t-(>1) month
-  def getDailyDate(partitionValue: String) = {
+  def getLastDayOfMonth(partitionValue: String) = {
     val c = getCalendar
     c.setTime(SMF.parse(partitionValue))
     val lastDate = c.getActualMaximum(Calendar.DATE)
@@ -50,14 +52,23 @@ trait CalendarConverter extends EnvLoader {
     getDateFormat(c)
   }
 
-  def getStartWithDate(started: Int): String = {
-    val c = getCalendar
-    c.setTime(SDF.parse(getDailyDate))
-    c.add(Calendar.DATE, started)
-    getDateFormat(c)
+  def getStartDate(frequencyType: FrequencyType, started: Int): String = {
+    frequencyType match {
+      case Monthly =>
+        val c = getCalendar
+        c.setTime(SMF.parse(getLastDayOfMonth(getLastMonth)))
+        val lastDate = c.getActualMaximum(Calendar.DATE)
+        c.set(Calendar.DATE, lastDate)
+        getDateFormat(c)
+      case Daily =>
+        val c = getCalendar
+        c.setTime(SDF.parse(getDailyDate))
+        c.add(Calendar.DATE, started)
+        getDateFormat(c)
+    }
   }
 
-  def getEndWithDate(startDay: String, traceDay: Int)= {
+  def getEndDate(startDay: String, traceDay: Int)= {
     val c = getCalendar
     c.setTime(SDF.parse(startDay))
     c.add(Calendar.DATE, traceDay)

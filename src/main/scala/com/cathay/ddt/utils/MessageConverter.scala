@@ -24,11 +24,12 @@ object MessageConverter extends CalendarConverter with EnvLoader {
         // Return currentDay - 2 day
         getDailyDate
       case false =>
-        if(partitionValue == getLastMonth) {
-          getDailyDate
-        }else {
-          getDailyDate(partitionValue)
-        }
+        getLastDayOfMonth(partitionValue)
+//        if(partitionValue == getLastMonth) {
+//          getDailyDate
+//        }else {
+//          getLastDayOfMonth(partitionValue)
+//        }
     }
 
   }
@@ -87,8 +88,8 @@ object MessageConverter extends CalendarConverter with EnvLoader {
           topic,
           input.update_frequency.toUpperCase(),
           input.tag_id,
-          Some(input.yyyymmdd),
           None,
+          Some(input.yyyymmdd),
           input.finish_time)
     }
 

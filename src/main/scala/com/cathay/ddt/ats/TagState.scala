@@ -154,41 +154,54 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
         Metadata(daily.toMap, monthly.toMap)
 
       case ReceivedMessage(tm, Daily) =>
-        // t-1 month, t-2 day -> true
-        tm.kafkaTopic match {
-          case "frontier-adw" =>
-            if(tm.yyyymmdd.contains(getDailyDate)) {
-              Metadata(currentData.daily + (tm.value -> true), currentData.monthly)
-            }else if(tm.yyyymm == tm.yyyymmdd){
-              Metadata(currentData.daily + (tm.value -> true), currentData.monthly)
-            } else {
-              currentData
-            }
-          case "hippo-finish" =>
-            if(tm.yyyymmdd.contains(getCurrentDate)) {
-              Metadata(currentData.daily + (tm.value -> true), currentData.monthly)
-            }else {
-              currentData
-            }
+        if(tm.yyyymmdd.contains(getDailyDate)) {
+          // partition
+          Metadata(currentData.daily + (tm.value -> true), currentData.monthly)
+        }else if(tm.yyyymm == tm.yyyymmdd){
+          // 代碼
+          Metadata(currentData.daily + (tm.value -> true), currentData.monthly)
+        } else {
+          currentData
         }
+      // t-1 month, t-2 day -> true
+      //        tm.kafkaTopic match {
+      //          case "frontier-adw" =>
+      //            if(tm.yyyymmdd.contains(getDailyDate)) {
+      //              // partition
+      //              Metadata(currentData.daily + (tm.value -> true), currentData.monthly)
+      //            }else if(tm.yyyymm == tm.yyyymmdd){
+      //              // 代碼
+      //              Metadata(currentData.daily + (tm.value -> true), currentData.monthly)
+      //            } else {
+      //              currentData
+      //            }
+      //          case "hippo-finish" =>
+      //            if(tm.yyyymmdd.contains(getCurrentDate)) {
+      //              Metadata(currentData.daily + (tm.value -> true), currentData.monthly)
+      //            }else {
+      //              currentData
+      //            }
 
       case ReceivedMessage(tm, Monthly) =>
+        if(tm.yyyymm.contains(getLastMonth))
+          Metadata(currentData.daily, currentData.monthly + (tm.value -> true))
+        else currentData
         // t-1 month, t-2 day -> true
-        tm.kafkaTopic match {
-          case "frontier-adw" =>
-            if(tm.yyyymm.contains(getLastMonth))
-              Metadata(currentData.daily, currentData.monthly + (tm.value -> true))
-            else currentData
-          case "hippo-finish" =>
-            if(tm.yyyymm.contains(getCurrentMonth))
-              Metadata(currentData.daily, currentData.monthly + (tm.value -> true))
-            else currentData
-        }
+//        tm.kafkaTopic match {
+//          case "frontier-adw" =>
+//            if(tm.yyyymm.contains(getLastMonth))
+//              Metadata(currentData.daily, currentData.monthly + (tm.value -> true))
+//            else currentData
+//          case "hippo-finish" =>
+//            if(tm.yyyymm.contains(getCurrentMonth))
+//              Metadata(currentData.daily, currentData.monthly + (tm.value -> true))
+//            else currentData
+//        }
 
       case UpdatedMessages(Daily) =>
         if (currentData.monthly.nonEmpty & currentData.daily.nonEmpty) {
           // if(last day) reset for next new month
-          if(getCurrentDate == getDayOfMonth(numsOfDelayDate - 1)) Metadata(resetDaily, resetMonthly)
+          if(getCurrentDate == getDayOfMonth(numsOfDelayDate)) Metadata(resetDaily, resetMonthly)
           // keep monthly reset daily
           else Metadata(resetDaily, currentData.monthly)
 
@@ -261,33 +274,93 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
 
   when(Running) {
     case Event(Launch, _) =>
-      frequency match {
-        case "M" =>
-          if(!stateData.asInstanceOf[Metadata].monthlyAlreadyRun) {
-            // sender ! ???
-
-            // run
-            RanMonthly(true)
-            println(getComposedSql)
-          }
-//          else {
-//            goto(Verifying) andThen { _ =>
-//              self ! Stop
-//            }
-//          }
-          goto(Verifying) applying UpdatedMessages(Monthly) andThen { _ =>
-            self ! Check
-          }
-        case "D" =>
-          // run
-          // or send to State scheduler
-          println(getComposedSql)
-
-          goto(Verifying) applying UpdatedMessages(Daily) andThen { _ =>
-            self ! Check
-          }
+      val dic = Await.result(getDictionary, 1 second)
+      if(dic.traced.isDefined == dic.traced.isDefined) {
+        frequency match {
+          case "M" =>
+            // sender or run
+            println(getComposedSql(Monthly, dic))
+            // if success
+            updateAndCheck(dic)
+          case "D" =>
+            println(getComposedSql(Daily, dic))
+            updateAndCheck(dic)
+        }
+      }else {
+        println(dic.sql)
+        // if success
+        updateAndCheck(dic)
       }
 
+    //        dic.update_frequency match {
+    //          case "M" =>
+    //            if(!stateData.asInstanceOf[Metadata].monthlyAlreadyRun) RanMonthly(true)
+    //            goto(Verifying) applying UpdatedMessages(Monthly) andThen { _ =>
+    //              self ! Check
+    //            }
+    //          case "D" =>
+    //            goto(Verifying) applying UpdatedMessages(Daily) andThen { _ =>
+    //              self ! Check
+    //            }
+    //        }
+    //      }else {
+    //        //frequency only dic.traced.getOrElse(0) == dic.traced.getOrElse(0)
+    //        println(dic.sql)
+    //        dic.update_frequency match {
+    //          case "M" =>
+    //            if(!stateData.asInstanceOf[Metadata].monthlyAlreadyRun) RanMonthly(true)
+    //            goto(Verifying) applying UpdatedMessages(Monthly) andThen { _ =>
+    //              self ! Check
+    //            }
+    //          case "D" =>
+    //            goto(Verifying) applying UpdatedMessages(Daily) andThen { _ =>
+    //              self ! Check
+    //            }
+    //        }
+    //
+    //      }
+
+
+    //      frequency match {
+    //        case "M" =>
+    //          if(!stateData.asInstanceOf[Metadata].monthlyAlreadyRun) {
+    //            // sender ! ???
+    //
+    //            // run
+    //            RanMonthly(true)
+    //            println(getComposedSql)
+    //          }
+    ////          else {
+    ////            goto(Verifying) andThen { _ =>
+    ////              self ! Stop
+    ////            }
+    ////          }
+    //          goto(Verifying) applying UpdatedMessages(Monthly) andThen { _ =>
+    //            self ! Check
+    //          }
+    //        case "D" =>
+    //          // run
+    //          // or send to State scheduler
+    //          println(getComposedSql)
+    //
+    //          goto(Verifying) applying UpdatedMessages(Daily) andThen { _ =>
+    //            self ! Check
+    //          }
+    //      }
+
+  }
+  def updateAndCheck(dic: CustomerDictionary) = {
+    dic.update_frequency match {
+      case "M" =>
+        if(!stateData.asInstanceOf[Metadata].monthlyAlreadyRun) RanMonthly(true)
+        goto(Verifying) applying UpdatedMessages(Monthly) andThen { _ =>
+          self ! Check
+        }
+      case "D" =>
+        goto(Verifying) applying UpdatedMessages(Daily) andThen { _ =>
+          self ! Check
+        }
+    }
   }
 
   when(Verifying){
@@ -320,16 +393,15 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
     MongoConnector.getCDCollection.flatMap(x => MongoUtils.findOneDictionary(x, query))
   }
 
-  def getComposedSql: String = {
-    val dic = Await.result(getDictionary, 1 second)
-    val startDate = getStartWithDate(dic.started.get)
-    val endDate = getEndWithDate(startDate, dic.traced.get)
+  def getComposedSql(frequencyType: FrequencyType, dic: CustomerDictionary): String = {
+    val startDate = getStartDate(frequencyType, dic.started.get)
+    val endDate = getEndDate(startDate, dic.traced.get)
     dic.sql.replaceAll("\\$start_date", startDate).replaceAll("\\$end_date", endDate)
   }
 
   onTransition {
     case _ -> Verifying =>
-      if(getCurrentDate == getDayOfMonth(1)) {
+      if(getCurrentDate == getDayOfMonth(-numsOfDelayMonth)) {
         goto(Receiving) applying RanMonthly(false)
       } else if(stateData.asInstanceOf[Metadata].monthlyAlreadyRun) {
         context.parent ! Cmd(Delete(id))

@@ -31,7 +31,7 @@ object TagManager extends EnvLoader {
   def initialDictionary(tagManager: ActorRef) = {
     import scala.concurrent.ExecutionContext.Implicits.global
     //     load customer dictionary
-    val query = BSONDocument("attribute" -> "behavior", "enable_flag" -> true)
+    val query = BSONDocument("enable_flag" -> true)
     MongoConnector.getCDCollection.flatMap(tagColl => MongoUtils.findDictionaries(tagColl, query)).map { docList =>
       docList.foreach(CD => tagManager ! Cmd(Load(CD)))
     }
@@ -95,7 +95,7 @@ object TagManager extends EnvLoader {
 
     def delete(id: String): TIsRegistry = {
       val tagIns = getTI(id).get
-      val dTagIns = TagInstance(tagIns.frequency, tagIns.id)
+      val dTagIns = TagInstance(tagIns.frequency.toUpperCase(), tagIns.id)
       val messageSet = state(tagIns)
       val newState = state - tagIns + (dTagIns -> messageSet)
       TIsRegistry(newState)
@@ -148,7 +148,7 @@ object TagManager extends EnvLoader {
       )
 
     def update(oldTI: TagInstance, actor: ActorRef): State = {
-      val newTI = TagInstance(oldTI.frequency, oldTI.id, Some(actor))
+      val newTI = TagInstance(oldTI.frequency.toUpperCase(), oldTI.id, Some(actor))
       State(
         tagInstReg.update(oldTI, newTI),
         tagMesReg.update(tagInstReg.getTMs(oldTI), oldTI, newTI))
@@ -182,6 +182,7 @@ class TagManager(kafkaConfig: Config) extends PersistentActor with ActorLogging 
   def updateState(evt: Evt): Unit = evt match {
     case Evt(TagRegister(tagDic)) =>
       state = state.register(tagDic)
+      saveSnapshot(state)
     case Evt(TagMesAdded(id, message)) =>
       state = state.add(id, message)
       saveSnapshot(state)
