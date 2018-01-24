@@ -6,7 +6,7 @@ import akka.persistence.fsm._
 import akka.persistence.fsm.PersistentFSM.FSMState
 import com.cathay.ddt.ats.TagManager.{Cmd, Delete}
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
-import com.cathay.ddt.tagging.schema.{CustomerDictionary, TagMessage}
+import com.cathay.ddt.tagging.schema.{TagDictionary, TagMessage}
 import com.cathay.ddt.tagging.schema.TagMessage.{Message, SimpleTagMessage}
 import com.cathay.ddt.utils.CalendarConverter
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
@@ -76,9 +76,9 @@ object TagState {
   }
 
   case class Metadata(override val daily: Map[String, Boolean], override val monthly: Map[String, Boolean]) extends Data {
-    var monthlyAlreadyRun = false
+    var monthlyAlreadyRun: Option[String] = None
     override def toString: String = {
-      s"daily: $daily\nmonthly: $monthly"
+      s"monthly: ${monthlyAlreadyRun.isDefined}\ndaily: $daily\nmonthly: $monthly"
     }
   }
 
@@ -92,7 +92,7 @@ object TagState {
 
   case class UpdatedMessages(`type`: FrequencyType) extends DomainEvent
 
-  case class RanMonthly(isRun: Boolean) extends DomainEvent
+  case object ResetRanMonthly extends DomainEvent
 
 
   // Frequency Types
@@ -110,6 +110,7 @@ object TagState {
   case object Check
   case object Launch
   case object Stop
+  case object RevivalCheck
 
 }
 
@@ -118,6 +119,7 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
 
   override def preStart(): Unit = {
     println(s"[Info] Tag $frequency, $id is already serving...")
+    self ! RevivalCheck
   }
 
   override def postStop(): Unit = {
@@ -136,7 +138,7 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
 
     def resetMonthly: Map[String, Boolean] = {
       val monthly = collection.mutable.Map[String, Boolean]()
-      currentData.monthly.keys.foreach( k=> monthly += (k -> false) )
+      currentData.monthly.keys.foreach( k => monthly += (k -> false) )
       monthly.toMap
     }
 
@@ -186,17 +188,17 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
         if(tm.yyyymm.contains(getLastMonth))
           Metadata(currentData.daily, currentData.monthly + (tm.value -> true))
         else currentData
-        // t-1 month, t-2 day -> true
-//        tm.kafkaTopic match {
-//          case "frontier-adw" =>
-//            if(tm.yyyymm.contains(getLastMonth))
-//              Metadata(currentData.daily, currentData.monthly + (tm.value -> true))
-//            else currentData
-//          case "hippo-finish" =>
-//            if(tm.yyyymm.contains(getCurrentMonth))
-//              Metadata(currentData.daily, currentData.monthly + (tm.value -> true))
-//            else currentData
-//        }
+      // t-1 month, t-2 day -> true
+      //        tm.kafkaTopic match {
+      //          case "frontier-adw" =>
+      //            if(tm.yyyymm.contains(getLastMonth))
+      //              Metadata(currentData.daily, currentData.monthly + (tm.value -> true))
+      //            else currentData
+      //          case "hippo-finish" =>
+      //            if(tm.yyyymm.contains(getCurrentMonth))
+      //              Metadata(currentData.daily, currentData.monthly + (tm.value -> true))
+      //            else currentData
+      //        }
 
       case UpdatedMessages(Daily) =>
         if (currentData.monthly.nonEmpty & currentData.daily.nonEmpty) {
@@ -210,16 +212,14 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
         }
 
       case UpdatedMessages(Monthly) =>
-        Metadata(resetDaily, resetMonthly)
+        val currentData = Metadata(resetDaily, resetMonthly)
+        currentData.monthlyAlreadyRun = Some(getLastMonth)
+        currentData
 
-      case RanMonthly(isRun) =>
-        if(isRun) {
-          currentData.asInstanceOf[Metadata].monthlyAlreadyRun = true
-          currentData
-        }else {
-          currentData.asInstanceOf[Metadata].monthlyAlreadyRun = false
-          currentData
-        }
+      case ResetRanMonthly =>
+        currentData.asInstanceOf[Metadata].monthlyAlreadyRun = None
+        currentData
+
 
     }
   }
@@ -253,13 +253,13 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
             saveStateSnapshot()
             self ! Check
             println(stateData)
-        }
+          }
         case "M" =>
           stay applying ReceivedMessage(tm, Monthly) andThen{ _ =>
             saveStateSnapshot()
             self ! Check
             println(stateData)
-        }
+          }
       }
 
     case Event(Check, _) =>
@@ -291,71 +291,13 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
         // if success
         updateAndCheck(dic)
       }
-
-    //        dic.update_frequency match {
-    //          case "M" =>
-    //            if(!stateData.asInstanceOf[Metadata].monthlyAlreadyRun) RanMonthly(true)
-    //            goto(Verifying) applying UpdatedMessages(Monthly) andThen { _ =>
-    //              self ! Check
-    //            }
-    //          case "D" =>
-    //            goto(Verifying) applying UpdatedMessages(Daily) andThen { _ =>
-    //              self ! Check
-    //            }
-    //        }
-    //      }else {
-    //        //frequency only dic.traced.getOrElse(0) == dic.traced.getOrElse(0)
-    //        println(dic.sql)
-    //        dic.update_frequency match {
-    //          case "M" =>
-    //            if(!stateData.asInstanceOf[Metadata].monthlyAlreadyRun) RanMonthly(true)
-    //            goto(Verifying) applying UpdatedMessages(Monthly) andThen { _ =>
-    //              self ! Check
-    //            }
-    //          case "D" =>
-    //            goto(Verifying) applying UpdatedMessages(Daily) andThen { _ =>
-    //              self ! Check
-    //            }
-    //        }
-    //
-    //      }
-
-
-    //      frequency match {
-    //        case "M" =>
-    //          if(!stateData.asInstanceOf[Metadata].monthlyAlreadyRun) {
-    //            // sender ! ???
-    //
-    //            // run
-    //            RanMonthly(true)
-    //            println(getComposedSql)
-    //          }
-    ////          else {
-    ////            goto(Verifying) andThen { _ =>
-    ////              self ! Stop
-    ////            }
-    ////          }
-    //          goto(Verifying) applying UpdatedMessages(Monthly) andThen { _ =>
-    //            self ! Check
-    //          }
-    //        case "D" =>
-    //          // run
-    //          // or send to State scheduler
-    //          println(getComposedSql)
-    //
-    //          goto(Verifying) applying UpdatedMessages(Daily) andThen { _ =>
-    //            self ! Check
-    //          }
-    //      }
-
   }
-  def updateAndCheck(dic: CustomerDictionary) = {
+  def updateAndCheck(dic: TagDictionary) = {
     dic.update_frequency match {
       case "M" =>
-        if(!stateData.asInstanceOf[Metadata].monthlyAlreadyRun) RanMonthly(true)
-        goto(Verifying) applying UpdatedMessages(Monthly) andThen { _ =>
-          self ! Check
-        }
+          goto(Verifying) applying UpdatedMessages(Monthly) andThen { _ =>
+            self ! Check
+          }
       case "D" =>
         goto(Verifying) applying UpdatedMessages(Daily) andThen { _ =>
           self ! Check
@@ -367,18 +309,26 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
     case Event(Check, metadata) =>
       if(metadata.isMonthlyNull) {
         context.parent ! Cmd(Delete(id))
-        self ! Stop
-        stay()
-      }else {
+        stop()
+      }else goto(Receiving)
+
+    case Event(RevivalCheck, _) =>
+      println(s"ANS: ${stateData.asInstanceOf[Metadata].monthlyAlreadyRun}")
+      if(getCurrentDate == getDayOfMonth(-numsOfDelayMonth)) {
+        println("111111111")
+        goto(Receiving) applying ResetRanMonthly
+      } else if(stateData.asInstanceOf[Metadata].monthlyAlreadyRun.getOrElse(None) == getLastMonth) {
+        println("222222222")
+        context.parent ! Cmd(Delete(id))
+        stop()
+      } else {
+        println("333333333")
         goto(Receiving)
       }
 
-    case Event(Stop, _) =>
-      stop()
-
-//    case Event(Remove, _) =>
-//      clearPersistentData()
-//      stop()
+    //    case Event(Remove, _) =>
+    //      clearPersistentData()
+    //      stop()
 
   }
 
@@ -387,28 +337,23 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
     deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr = lastSequenceNr))
   }
 
-  def getDictionary: Future[CustomerDictionary] = {
+  def getDictionary: Future[TagDictionary] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     val query = BSONDocument("_id" -> BSONObjectID(id))
-    MongoConnector.getCDCollection.flatMap(x => MongoUtils.findOneDictionary(x, query))
+    MongoConnector.getTDCollection.flatMap(x => MongoUtils.findOneDictionary(x, query))
   }
 
-  def getComposedSql(frequencyType: FrequencyType, dic: CustomerDictionary): String = {
+  def getComposedSql(frequencyType: FrequencyType, dic: TagDictionary): String = {
     val startDate = getStartDate(frequencyType, dic.started.get)
-    val endDate = getEndDate(startDate, dic.traced.get)
+    val endDate = getEndDate(frequencyType, startDate, dic.traced.get)
     dic.sql.replaceAll("\\$start_date", startDate).replaceAll("\\$end_date", endDate)
   }
 
-  onTransition {
-    case _ -> Verifying =>
-      if(getCurrentDate == getDayOfMonth(-numsOfDelayMonth)) {
-        goto(Receiving) applying RanMonthly(false)
-      } else if(stateData.asInstanceOf[Metadata].monthlyAlreadyRun) {
-        context.parent ! Cmd(Delete(id))
-        self ! Stop
-        stay()
-      } else goto(Receiving)
-  }
+//  onTransition {
+//    case _ -> _ =>
+//      println(s"Now State: $stateName")
+//      println(s"Now StateData: $stateData")
+//  }
 
   whenUnhandled {
     case Event(SaveSnapshotSuccess(metadata), _) ⇒
@@ -417,6 +362,13 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
 
     case Event(SaveSnapshotFailure(metadata, reason), _) ⇒
       println(s"save snapshot failed and failure is $reason")
+      stay()
+
+    case Event(RevivalCheck, _) =>
+      println(s"Tag $frequency, $id: This state $stateName dont need to Revive")
+      stay()
+
+    case Event(Requirement(tmSet), _) =>
       stay()
   }
 }

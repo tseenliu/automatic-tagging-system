@@ -13,7 +13,7 @@ trait CalendarConverter extends EnvLoader {
   val config = getConfig("hive")
 
   val SMF = new SimpleDateFormat("yyyyMM")
-  val SDF = new SimpleDateFormat("yyyyMMdd")
+  val SDF = new SimpleDateFormat("yyyy-MM-dd")
 
   val numsOfDelayDate = config.getString("hive.calendar.daily").toInt
   val numsOfDelayMonth = config.getString("hive.calendar.monthly").toInt
@@ -56,23 +56,32 @@ trait CalendarConverter extends EnvLoader {
     frequencyType match {
       case Monthly =>
         val c = getCalendar
-        c.setTime(SMF.parse(getLastDayOfMonth(getLastMonth)))
+        c.setTime(SMF.parse(getLastMonth))
+        c.set(Calendar.MONTH, started)
+        getDateFormat(c)
+      case Daily =>
+        val c = getCalendar
+        c.setTime(SDF.parse(getDailyDate))
+        c.add(Calendar.DATE, started+1)
+        getDateFormat(c)
+    }
+  }
+
+  def getEndDate(frequencyType: FrequencyType, started: String, traced: Int)= {
+    frequencyType match {
+      case Monthly =>
+        val c = getCalendar
+        c.setTime(SDF.parse(started))
+        c.add(Calendar.MONTH, traced-1)
         val lastDate = c.getActualMaximum(Calendar.DATE)
         c.set(Calendar.DATE, lastDate)
         getDateFormat(c)
       case Daily =>
         val c = getCalendar
-        c.setTime(SDF.parse(getDailyDate))
-        c.add(Calendar.DATE, started)
+        c.setTime(SDF.parse(started))
+        c.add(Calendar.DATE, traced-1)
         getDateFormat(c)
     }
-  }
-
-  def getEndDate(startDay: String, traceDay: Int)= {
-    val c = getCalendar
-    c.setTime(SDF.parse(startDay))
-    c.add(Calendar.DATE, traceDay)
-    getDateFormat(c)
   }
 
 }
