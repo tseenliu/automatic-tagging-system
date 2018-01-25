@@ -1,7 +1,7 @@
 package com.cathay.ddt.db.example
 
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
-import com.cathay.ddt.tagging.schema.TagDictionary
+import com.cathay.ddt.tagging.schema.CustomerDictionary
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -14,11 +14,10 @@ object Insert extends App {
   val FBsonCollection = MongoConnector.dbFromConnection(connection1, "tag", "icustomer")
 
   for (i <- 4 to 5) {
-    val tmp = TagDictionary(
+    val tmp = CustomerDictionary(
       channel_type = "bank",
-      channel_name = "信用卡/簽帳卡",
-      tag_type = "刷卡消費",
-      tag_name = "超市購物",
+      segment_type = "刷卡消費",
+      segment_name = "超市購物",
       sql = """
                 |select
                 |cutsomerID,
@@ -38,8 +37,6 @@ object Insert extends App {
       traced = None,
       description = "超市購買族群",
       enable_flag = true,
-      score_option = "C",
-      attribute = "behavior",
       creator = "Jenny",
       is_focus = true)
 

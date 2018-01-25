@@ -6,7 +6,7 @@ import akka.persistence.fsm._
 import akka.persistence.fsm.PersistentFSM.FSMState
 import com.cathay.ddt.ats.TagManager.{Cmd, Delete}
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
-import com.cathay.ddt.tagging.schema.{TagDictionary, TagMessage}
+import com.cathay.ddt.tagging.schema.{CustomerDictionary, TagMessage}
 import com.cathay.ddt.tagging.schema.TagMessage.{Message, SimpleTagMessage}
 import com.cathay.ddt.utils.CalendarConverter
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
@@ -292,7 +292,7 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
         updateAndCheck(dic)
       }
   }
-  def updateAndCheck(dic: TagDictionary) = {
+  def updateAndCheck(dic: CustomerDictionary) = {
     dic.update_frequency match {
       case "M" =>
           goto(Verifying) applying UpdatedMessages(Monthly) andThen { _ =>
@@ -337,13 +337,13 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
     deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr = lastSequenceNr))
   }
 
-  def getDictionary: Future[TagDictionary] = {
+  def getDictionary: Future[CustomerDictionary] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     val query = BSONDocument("_id" -> BSONObjectID(id))
     MongoConnector.getTDCollection.flatMap(x => MongoUtils.findOneDictionary(x, query))
   }
 
-  def getComposedSql(frequencyType: FrequencyType, dic: TagDictionary): String = {
+  def getComposedSql(frequencyType: FrequencyType, dic: CustomerDictionary): String = {
     val startDate = getStartDate(frequencyType, dic.started.get)
     val endDate = getEndDate(frequencyType, startDate, dic.traced.get)
     dic.sql.replaceAll("\\$start_date", startDate).replaceAll("\\$end_date", endDate)
