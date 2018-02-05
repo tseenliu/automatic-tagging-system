@@ -15,23 +15,34 @@ object MessageConverter extends CalendarConverter with EnvLoader {
   var sqlMList = new ListBuffer[(String, Message)]()
   var kafkaMList = new ListBuffer[(String, String)]()
   var sqlMTable: Map[String, Message] = Map()
-  var kafaMTable: Map[String, String] = Map()
+  var kafkaMTable: Map[String, String] = Map()
 
   def getRealDate(partitionValue: String): String = {
-    val currentMon = getCurrentMonth
-    partitionValue == currentMon match {
-      case true =>
-        // Return currentDay - 2 day
-        getDailyDate
-      case false =>
-        getLastDayOfMonth(partitionValue)
+    partitionValue match {
+      case x if x == getCurrentMonth => getDailyDate
+
+      case x if x == getLastMonth =>
+        if(getCurrentDate == getDayOfMonth(1)) getDailyDate
+        else getLastDayOfMonth(partitionValue)
+
+      case _ => getLastDayOfMonth(partitionValue)
+    }
+//    partitionValue == currentMon match {
+//      case true =>
+//        // Return currentDay - 2 day
+//        getDailyDate
+//      case false =>
 //        if(partitionValue == getLastMonth) {
-//          getDailyDate
+//          if(getCurrentDate == getDayOfMonth(1)) {
+//            getDailyDate
+//          } else getLastDayOfMonth(partitionValue)
 //        }else {
 //          getLastDayOfMonth(partitionValue)
 //        }
-    }
-
+//
+//      //        getLastDayOfMonth(partitionValue)
+//
+//    }
   }
 
   // Convert to tagMessages using a mapping table
@@ -80,7 +91,7 @@ object MessageConverter extends CalendarConverter with EnvLoader {
           topic,
           input.update_frequency.toUpperCase(),
           input.tag_id,
-          Some(input.yyyymmdd.substring(0,6)),
+          Some(input.yyyymm.getOrElse("")),
           None,
           input.finish_time)
       case "D" =>
@@ -89,7 +100,7 @@ object MessageConverter extends CalendarConverter with EnvLoader {
           input.update_frequency.toUpperCase(),
           input.tag_id,
           None,
-          Some(input.yyyymmdd),
+          Some(input.yyyymmdd.getOrElse("")),
           input.finish_time)
     }
 
@@ -98,13 +109,14 @@ object MessageConverter extends CalendarConverter with EnvLoader {
 
   // parsing sql and get require value
   def getMessages(sql: String): Iterator[Message] = {
-    val tablePattern = "(VP_BANK|vp_bank)\\.([a-z\\-\\_A-Z]+)".r
-    val matches = tablePattern.findAllIn(sql)
+//    val tagPattern = s"""([tag_id\\s]+)\\=(["'a-z\\-\\_A-Z\\s]+)""".r
+    val tagPattern = s"""([tag_id\\s]+)\\=(["'\\s]+)([\\-\\_a-zA-Z0-9]+)(["'\\s]+)""".r
+    val matches = tagPattern.findAllIn(sql)
     val map = getSqlMTable
     var set = scala.collection.mutable.Set[Message]()
     matches.foreach{ x =>
-      val table = x.trim.split("\\.")(1)
-      set += map(table)
+      val tagPattern(a,b,c,d) = x
+      set += map(c)
     }
     set.toIterator
   }
@@ -119,17 +131,17 @@ object MessageConverter extends CalendarConverter with EnvLoader {
   }
 
   def getkafkaMTable: Map[String, String] = {
-    if (kafaMTable.isEmpty) {
+    if (kafkaMTable.isEmpty) {
       initialFromLocal()
-      kafaMTable
+      kafkaMTable
     } else {
-      kafaMTable
+      kafkaMTable
     }
   }
 
   def initialFromLocal(): Unit = {
     sqlMTable = Map()
-    kafaMTable = Map()
+    kafkaMTable = Map()
     for (line <- Source.fromFile(mappingFilePath).getLines) {
       val record = line.trim.split(",")
       val key = record(0)
@@ -139,7 +151,7 @@ object MessageConverter extends CalendarConverter with EnvLoader {
       sqlMList += ((key, SimpleTagMessage(tmp(1), tmp(0))))
     }
     sqlMTable = sqlMList.toMap
-    kafaMTable = kafkaMList.toMap
+    kafkaMTable = kafkaMList.toMap
   }
 
   def print(): Unit = {

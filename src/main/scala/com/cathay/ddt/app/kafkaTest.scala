@@ -9,7 +9,7 @@ import com.cathay.ddt.utils.EnvLoader
   */
 object kafkaTest extends App with EnvLoader {
 
-  val config = getConfig("tag")
+  val config = getConfig("kafka")
   val system = ActorSystem("alex")
   val kafkaActor = system.actorOf(Props(new MessageConsumer(config)), "kafka-test")
 }

@@ -11,7 +11,9 @@ object ActorTest extends App {
 
 //  val account = system.actorOf(Props(new Account("12345")), name = "alex")
 
-  Thread.sleep(1000)
-  system.terminate()
+  val a = system.actorOf(Props[TimerActor], name = "alex")
+
+//  Thread.sleep(1000)
+//  system.terminate()
 
 }

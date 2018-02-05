@@ -15,8 +15,9 @@ trait CalendarConverter extends EnvLoader {
   val SMF = new SimpleDateFormat("yyyyMM")
   val SDF = new SimpleDateFormat("yyyy-MM-dd")
 
-  val numsOfDelayDate = config.getString("hive.calendar.daily").toInt
-  val numsOfDelayMonth = config.getString("hive.calendar.monthly").toInt
+  val numsOfDelayDate = config.getString("hive.scheduler.daily").toInt
+  val numsOfDelayMonth = config.getString("hive.scheduler.monthly").toInt
+  val etlTime = config.getString("hive.scheduler.time")
 
   def getCalendar = Calendar.getInstance()
   def getDateFormat(c: Calendar) = SDF.format(c.getTime)

@@ -1,5 +1,8 @@
 package com.cathay.ddt.ats
 
+import java.text.SimpleDateFormat
+import java.util.Calendar
+
 import scala.reflect._
 import akka.persistence._
 import akka.persistence.fsm._
@@ -13,7 +16,6 @@ import reactivemongo.bson.{BSONDocument, BSONObjectID}
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-
 
 
 /**
@@ -92,6 +94,8 @@ object TagState {
 
   case class UpdatedMessages(`type`: FrequencyType) extends DomainEvent
 
+  case class Reset(`type`: FrequencyType) extends DomainEvent
+
   case object ResetRanMonthly extends DomainEvent
 
 
@@ -111,6 +115,7 @@ object TagState {
   case object Launch
   case object Stop
   case object RevivalCheck
+  case class Timeout(time: String)
 
 }
 
@@ -118,6 +123,8 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
   import TagState._
 
   override def preStart(): Unit = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    context.system.scheduler.schedule(0 seconds, 1 seconds, self, Timeout(etlTime))
     println(s"[Info] Tag $frequency, $id is already serving...")
     self ! RevivalCheck
   }
@@ -203,9 +210,9 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
       case UpdatedMessages(Daily) =>
         if (currentData.monthly.nonEmpty & currentData.daily.nonEmpty) {
           // if(last day) reset for next new month
-          if(getCurrentDate == getDayOfMonth(numsOfDelayDate)) Metadata(resetDaily, resetMonthly)
+//          if(getCurrentDate == getDayOfMonth(numsOfDelayDate)) Metadata(resetDaily, resetMonthly)
           // keep monthly reset daily
-          else Metadata(resetDaily, currentData.monthly)
+          Metadata(resetDaily, currentData.monthly)
 
         }else {
           Metadata(resetDaily, resetMonthly)
@@ -215,6 +222,12 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
         val currentData = Metadata(resetDaily, resetMonthly)
         currentData.monthlyAlreadyRun = Some(getLastMonth)
         currentData
+
+      case Reset(frequencyType) =>
+        frequencyType match {
+          case Daily => Metadata(resetDaily, currentData.monthly)
+          case Monthly => Metadata(resetDaily, resetMonthly)
+        }
 
       case ResetRanMonthly =>
         currentData.asInstanceOf[Metadata].monthlyAlreadyRun = None
@@ -270,6 +283,20 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
       }else {
         stay()
       }
+
+    case Event(Timeout(time), _) =>
+      if (new SimpleDateFormat("HH:mm:ss").format(Calendar.getInstance().getTime).compareTo(time) == 0) {
+        if(getCurrentDate.split("-")(2) == "01"){
+          goto(Verifying) applying Reset(Monthly) andThen { _ =>
+            self ! Check
+          }
+        } else {
+          goto(Verifying) applying Reset(Daily) andThen { _ =>
+            self ! Check
+          }
+        }
+
+      } else stay()
   }
 
   when(Running) {
@@ -314,15 +341,17 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
 
     case Event(RevivalCheck, _) =>
       println(s"ANS: ${stateData.asInstanceOf[Metadata].monthlyAlreadyRun}")
-      if(getCurrentDate == getDayOfMonth(-numsOfDelayMonth)) {
-        println("111111111")
-        goto(Receiving) applying ResetRanMonthly
-      } else if(stateData.asInstanceOf[Metadata].monthlyAlreadyRun.getOrElse(None) == getLastMonth) {
-        println("222222222")
+
+      if(stateData.asInstanceOf[Metadata].monthlyAlreadyRun.isEmpty) {
+        goto(Receiving)
+
+      } else if(stateData.asInstanceOf[Metadata].monthlyAlreadyRun.get == getLastMonth) {
         context.parent ! Cmd(Delete(id))
         stop()
+
+      } else if(getCurrentDate >= getDayOfMonth(-numsOfDelayMonth)) {
+        goto(Receiving)
       } else {
-        println("333333333")
         goto(Receiving)
       }
 
@@ -365,7 +394,7 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
       stay()
 
     case Event(RevivalCheck, _) =>
-      println(s"Tag $frequency, $id: This state $stateName dont need to Revive")
+      println(s"Tag $frequency, $id: This state $stateName don't need to Revive")
       stay()
 
     case Event(Requirement(tmSet), _) =>
