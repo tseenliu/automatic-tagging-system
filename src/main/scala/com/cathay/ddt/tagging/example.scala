@@ -15,13 +15,23 @@ object example extends App {
 
   val spark = SparkSession
     .builder()
-    .master("local[*]")
-    .appName("Spark SQL Example")
+//    .master("local[*]")
+    .appName("sparkshell-alex")
+    .master("yarn-client")
+//    .config("spark.driver.host","127.0.0.1")
+    .config("spark.sql.warehouse","/user/hive/warehouse")
+    .config("hive.metastore.uris","thrift://parhhdpm1:9083,thrift://parhhdpm2:9083")
+    .config("spark.driver.memory","2g")
+    .config("spark.executor.memory","30g")
+    .config("spark.driver.cores","1")
+    .config("spark.executor.cores","3")
+    .config("spark.dynamicAllocation.enabled","true")
+    .config("spark.shuffle.service.enabled","true")
     .enableHiveSupport()
     .getOrCreate()
 
 //  val df = spark.sql(
-//    """
+//
 //      |select
 //      |cutsomerID,
 //      |cnt,
@@ -33,21 +43,19 @@ object example extends App {
 //    """.stripMargin)
 //  df.show
 
-  val tmp =
-    s"""
-       |select
-       |*
-       |from travel
-       |where txn_date =      "2017-03-27
-     """.stripMargin.trim
-  println(tmp)
+//  val tmp =
+//    s"""
+//       |select
+//       |*
+//       |from travel
+//       |where txn_date =      "2017-03-27
+//     """.stripMargin.trim
+//  println(tmp)
 
+  println("starting.......")
   val df = spark.sql(
     """
-      |select
-      |*
-      |from travel
-      |where txn_date =         "2017-03-27"
+      show databases
     """.stripMargin)
   df.show
 }

@@ -3,17 +3,14 @@ package com.cathay.ddt.utils
 import com.cathay.ddt.kafka.{FrontierMessage, TagFinishMessage}
 import com.cathay.ddt.tagging.schema.TagMessage.{Message, SimpleTagMessage}
 import com.cathay.ddt.tagging.schema.{CustomerDictionary, TagMessage}
+import com.cathay.ddt.utils.sparkUtils.AdwTable
 
-import scala.collection.mutable.ListBuffer
-import scala.io.Source
 
 /**
   * Created by Tse-En on 2017/12/20.
   */
 object MessageConverter extends CalendarConverter with EnvLoader {
-  val mappingFilePath = getConfig("hive").getString("hive.mapping-path")
-  var sqlMList = new ListBuffer[(String, Message)]()
-  var kafkaMList = new ListBuffer[(String, String)]()
+//  val mappingFilePath = getConfig("hive").getString("hive.mapping-path")
   var sqlMTable: Map[String, Message] = Map()
   var kafkaMTable: Map[String, String] = Map()
 
@@ -123,7 +120,7 @@ object MessageConverter extends CalendarConverter with EnvLoader {
 
   def getSqlMTable: Map[String, Message] = {
     if (sqlMTable.isEmpty) {
-      initialFromLocal()
+      initialADW()
       sqlMTable
     } else {
       sqlMTable
@@ -132,30 +129,44 @@ object MessageConverter extends CalendarConverter with EnvLoader {
 
   def getkafkaMTable: Map[String, String] = {
     if (kafkaMTable.isEmpty) {
-      initialFromLocal()
+      initialADW()
       kafkaMTable
     } else {
       kafkaMTable
     }
   }
 
-  def initialFromLocal(): Unit = {
+//  def initialFromLocal(): Unit = {
+//    sqlMTable = Map()
+//    kafkaMTable = Map()
+//    for (line <- Source.fromFile(mappingFilePath).getLines) {
+//      val record = line.trim.split(",")
+//      val key = record(0)
+//      val value = record(1)
+//      val tmp = value.split(" ")
+//      kafkaMList += ((tmp(0), tmp(1)))
+//      sqlMList += ((key, SimpleTagMessage(tmp(1), tmp(0))))
+//    }
+//    sqlMTable = sqlMList.toMap
+//    kafkaMTable = kafkaMList.toMap
+//  }
+
+  def initialADW(): Unit = {
+    val adw = new AdwTable()
     sqlMTable = Map()
     kafkaMTable = Map()
-    for (line <- Source.fromFile(mappingFilePath).getLines) {
-      val record = line.trim.split(",")
-      val key = record(0)
-      val value = record(1)
-      val tmp = value.split(" ")
-      kafkaMList += ((tmp(0), tmp(1)))
-      sqlMList += ((key, SimpleTagMessage(tmp(1), tmp(0))))
-    }
-    sqlMTable = sqlMList.toMap
-    kafkaMTable = kafkaMList.toMap
+    adw.initial()
+    sqlMTable = adw.getSqlMList.toMap
+    kafkaMTable = adw.getKafkaMList.toMap
   }
 
-  def print(): Unit = {
+  def printSql(): Unit = {
     val m = getSqlMTable
+    m.foreach(println(_))
+  }
+
+  def printKafka(): Unit = {
+    val m = getkafkaMTable
     m.foreach(println(_))
   }
 
