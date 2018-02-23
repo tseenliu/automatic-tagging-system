@@ -307,7 +307,7 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
           case "M" =>
             // sender or run
             println(getComposedSql(Monthly, dic))
-            // if success
+            // if success, produce and update
             updateAndCheck(dic)
           case "D" =>
             println(getComposedSql(Daily, dic))
