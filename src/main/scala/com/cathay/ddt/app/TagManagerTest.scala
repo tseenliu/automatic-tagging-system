@@ -10,8 +10,7 @@ import com.cathay.ddt.utils.EnvLoader
   */
 object TagManagerTest extends App with EnvLoader {
 
-  val kafkaConfig = getConfig("kafka")
-  val tagManagerRef = TagManager.initiate(kafkaConfig)
+  val tagManagerRef = TagManager.initiate
   Thread.sleep(5000)
   tagManagerRef ! Cmd(ShowState)
 

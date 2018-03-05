@@ -1,15 +1,16 @@
 package com.cathay.ddt.ats
 
 import java.text.SimpleDateFormat
-import java.util.Calendar
 
 import scala.reflect._
 import akka.persistence._
 import akka.persistence.fsm._
 import akka.persistence.fsm.PersistentFSM.FSMState
 import com.cathay.ddt.ats.TagManager.{Cmd, Delete}
+import com.cathay.ddt.ats.TagScheduler.{Schedule, ScheduleInstance}
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
-import com.cathay.ddt.tagging.schema.{CustomerDictionary, TagMessage}
+import com.cathay.ddt.kafka.MessageProducer
+import com.cathay.ddt.tagging.schema.{TagDictionary, TagMessage}
 import com.cathay.ddt.tagging.schema.TagMessage.{Message, SimpleTagMessage}
 import com.cathay.ddt.utils.CalendarConverter
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
@@ -113,6 +114,7 @@ object TagState {
   case class Receipt(tagMessage: TagMessage)
   case object Check
   case object Launch
+  case class Report(frequencyType: FrequencyType, dic: TagDictionary)
   case object Stop
   case object RevivalCheck
   case class Timeout(time: String)
@@ -285,7 +287,7 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
       }
 
     case Event(Timeout(time), _) =>
-      if (new SimpleDateFormat("HH:mm:ss").format(Calendar.getInstance().getTime).compareTo(time) == 0) {
+      if (new SimpleDateFormat("HH:mm:ss").format(getCalendar.getTime).compareTo(time) == 0) {
         if(getCurrentDate.split("-")(2) == "01"){
           goto(Verifying) applying Reset(Monthly) andThen { _ =>
             self ! Check
@@ -301,25 +303,34 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
 
   when(Running) {
     case Event(Launch, _) =>
-      val dic = Await.result(getDictionary, 1 second)
-      if(dic.traced.isDefined == dic.traced.isDefined) {
+      val dic = Await.result(getDictionary, 10 second)
+      if(dic.started.isDefined && dic.traced.isDefined) {
         frequency match {
           case "M" =>
             // sender or run
             println(getComposedSql(Monthly, dic))
             // if success, produce and update
-            updateAndCheck(dic)
+            context.actorSelection("../tag-scheduler") ! Schedule(ScheduleInstance(getComposedSql(Monthly, dic), dic))
+            stay()
           case "D" =>
             println(getComposedSql(Daily, dic))
-            updateAndCheck(dic)
+            context.actorSelection("../tag-scheduler") ! Schedule(ScheduleInstance(getComposedSql(Daily, dic), dic))
+            stay()
         }
       }else {
+        // without time composing
         println(dic.sql)
-        // if success
-        updateAndCheck(dic)
+        context.actorSelection("../tag-scheduler") ! Schedule(ScheduleInstance(getComposedSql(Daily, dic), dic))
+        stay()
       }
+
+    case Event(Report(frequencyType, dic), _) =>
+      // if success, produce and update
+      MessageProducer.getProducer.sendToFinishTopic(frequencyType, dic)
+      updateAndCheck(dic)
+
   }
-  def updateAndCheck(dic: CustomerDictionary) = {
+  def updateAndCheck(dic: TagDictionary): PersistentFSM.State[TagState.State, Data, DomainEvent] = {
     dic.update_frequency match {
       case "M" =>
           goto(Verifying) applying UpdatedMessages(Monthly) andThen { _ =>
@@ -366,23 +377,17 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
     deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr = lastSequenceNr))
   }
 
-  def getDictionary: Future[CustomerDictionary] = {
+  def getDictionary: Future[TagDictionary] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     val query = BSONDocument("_id" -> BSONObjectID(id))
     MongoConnector.getTDCollection.flatMap(x => MongoUtils.findOneDictionary(x, query))
   }
 
-  def getComposedSql(frequencyType: FrequencyType, dic: CustomerDictionary): String = {
+  def getComposedSql(frequencyType: FrequencyType, dic: TagDictionary): String = {
     val startDate = getStartDate(frequencyType, dic.started.get)
     val endDate = getEndDate(frequencyType, startDate, dic.traced.get)
     dic.sql.replaceAll("\\$start_date", startDate).replaceAll("\\$end_date", endDate)
   }
-
-//  onTransition {
-//    case _ -> _ =>
-//      println(s"Now State: $stateName")
-//      println(s"Now StateData: $stateData")
-//  }
 
   whenUnhandled {
     case Event(SaveSnapshotSuccess(metadata), _) ⇒

@@ -4,34 +4,34 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 
 import com.cathay.ddt.ats.TagState.{Daily, FrequencyType, Monthly}
+import com.typesafe.config.Config
 
 /**
   * Created by Tse-En on 2018/1/14.
   */
 trait CalendarConverter extends EnvLoader {
 
-  val config = getConfig("hive")
-
+  val config: Config = getConfig("hive")
   val SMF = new SimpleDateFormat("yyyyMM")
   val SDF = new SimpleDateFormat("yyyy-MM-dd")
 
-  val numsOfDelayDate = config.getString("hive.scheduler.daily").toInt
-  val numsOfDelayMonth = config.getString("hive.scheduler.monthly").toInt
-  val etlTime = config.getString("hive.scheduler.time")
+  val numsOfDelayDate: Int = config.getString("hive.scheduler.daily").toInt
+  val numsOfDelayMonth: Int = config.getString("hive.scheduler.monthly").toInt
+  val etlTime: String = config.getString("hive.scheduler.time")
 
-  def getCalendar = Calendar.getInstance()
-  def getDateFormat(c: Calendar) = SDF.format(c.getTime)
-  def getMonthFormat(c: Calendar) = SMF.format(c.getTime)
-  def getCurrentMonth = getMonthFormat(getCalendar)
-  def getCurrentDate = getDateFormat(getCalendar)
-  def getDayOfMonth(day: Int) = {
+  def getCalendar: Calendar = Calendar.getInstance()
+  def getDateFormat(c: Calendar): String = SDF.format(c.getTime)
+  def getMonthFormat(c: Calendar): String = SMF.format(c.getTime)
+  def getCurrentMonth: String = getMonthFormat(getCalendar)
+  def getCurrentDate: String = getDateFormat(getCalendar)
+  def getDayOfMonth(day: Int): String = {
     val c = Calendar.getInstance()
     c.set(Calendar.DAY_OF_MONTH, day)
     getDateFormat(c)
   }
 
   // t-1 month
-  def getLastMonth = {
+  def getLastMonth: String = {
     val c = getCalendar
     c.add(Calendar.MONTH, numsOfDelayMonth)
     getMonthFormat(c)
@@ -45,7 +45,7 @@ trait CalendarConverter extends EnvLoader {
   }
 
   // t-(>1) month
-  def getLastDayOfMonth(partitionValue: String) = {
+  def getLastDayOfMonth(partitionValue: String): String = {
     val c = getCalendar
     c.setTime(SMF.parse(partitionValue))
     val lastDate = c.getActualMaximum(Calendar.DATE)
@@ -68,7 +68,7 @@ trait CalendarConverter extends EnvLoader {
     }
   }
 
-  def getEndDate(frequencyType: FrequencyType, started: String, traced: Int)= {
+  def getEndDate(frequencyType: FrequencyType, started: String, traced: Int): String = {
     frequencyType match {
       case Monthly =>
         val c = getCalendar

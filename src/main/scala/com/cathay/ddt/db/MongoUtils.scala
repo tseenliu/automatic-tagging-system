@@ -1,6 +1,6 @@
 package com.cathay.ddt.db
 
-import com.cathay.ddt.tagging.schema.CustomerDictionary
+import com.cathay.ddt.tagging.schema.TagDictionary
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.{BSONDocument, Macros}
@@ -14,8 +14,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
   * Created by Tse-En on 2017/12/12.
   */
 object MongoUtils {
-  implicit val reader = Macros.reader[CustomerDictionary]
-  implicit val writer = Macros.writer[CustomerDictionary]
+  implicit val reader = Macros.reader[TagDictionary]
+  implicit val writer = Macros.writer[TagDictionary]
 
 
   /* Write Documents */
@@ -31,7 +31,7 @@ object MongoUtils {
     //writeRes.map(_ => {}) // in this example, do nothing with the success
   }
 
-  def insert(coll: BSONCollection, td: CustomerDictionary): Future[Boolean] = {
+  def insert(coll: BSONCollection, td: TagDictionary): Future[Boolean] = {
     val writeRes: Future[WriteResult] = coll.insert(td)
     writeRes.onComplete { // Dummy callbacks
       case Failure(e) => e.printStackTrace()
@@ -55,14 +55,14 @@ object MongoUtils {
 
 
   /* Find Documents */
-  def findDictionaries(collection: BSONCollection, query: BSONDocument)(implicit ec: ExecutionContext): Future[List[CustomerDictionary]] = {
-    implicit val reader = Macros.reader[CustomerDictionary]
-    collection.find(query).cursor[CustomerDictionary]().collect[List]()
+  def findDictionaries(collection: BSONCollection, query: BSONDocument)(implicit ec: ExecutionContext): Future[List[TagDictionary]] = {
+    implicit val reader = Macros.reader[TagDictionary]
+    collection.find(query).cursor[TagDictionary]().collect[List]()
   }
 
-  def findOneDictionary(collection: BSONCollection, query: BSONDocument)(implicit ec: ExecutionContext): Future[CustomerDictionary] = {
-    implicit val reader = Macros.reader[CustomerDictionary]
-    collection.find(query).requireOne[CustomerDictionary]
+  def findOneDictionary(collection: BSONCollection, query: BSONDocument)(implicit ec: ExecutionContext): Future[TagDictionary] = {
+    implicit val reader = Macros.reader[TagDictionary]
+    collection.find(query).requireOne[TagDictionary]
   }
 
 }

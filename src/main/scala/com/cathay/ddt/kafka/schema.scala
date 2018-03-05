@@ -1,6 +1,6 @@
 package com.cathay.ddt.kafka
 
-import spray.json.DefaultJsonProtocol
+import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
 /**
   * Created by Tse-En on 2017/12/23.
@@ -27,6 +27,6 @@ case class TagFinishMessage(hippo_name: String,  //batchetl.tagging
                             is_success: Boolean)
 
 object TagJsonProtocol extends DefaultJsonProtocol {
-  implicit val frontierFormat = jsonFormat6(FrontierMessage)
-  implicit val tagFinishFormat = jsonFormat8(TagFinishMessage)
+  implicit val frontierFormat: RootJsonFormat[FrontierMessage] = jsonFormat6(FrontierMessage)
+  implicit val tagFinishFormat: RootJsonFormat[TagFinishMessage] = jsonFormat8(TagFinishMessage)
 }

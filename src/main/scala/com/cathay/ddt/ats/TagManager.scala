@@ -4,15 +4,15 @@ import akka.persistence._
 import akka.actor.{ActorLogging, ActorRef, ActorSystem, Props}
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import com.cathay.ddt.kafka.MessageConsumer
-import com.cathay.ddt.tagging.schema.{CustomerDictionary, TagMessage}
+import com.cathay.ddt.tagging.schema.{TagDictionary, TagMessage}
 import com.cathay.ddt.tagging.schema.TagMessage.Message
 import reactivemongo.bson.BSONDocument
-import com.typesafe.config.Config
 import com.cathay.ddt.ats.TagState._
 import akka.pattern.ask
 import akka.util.Timeout
 import com.cathay.ddt.utils.{EnvLoader, MessageConverter}
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 /**
@@ -21,14 +21,17 @@ import scala.concurrent.duration._
 
 object TagManager extends EnvLoader {
 
-  def initiate(kafkaConfig: Config): ActorRef = {
+  def initiate: ActorRef = {
     val system = ActorSystem("tag")
-    val tagManager = system.actorOf(Props(new TagManager(kafkaConfig)), name="tag-manager")
+    val tagManager = system.actorOf(Props[TagManager], name="tag-manager")
+    system.actorOf(Props[TagScheduler], name="tag-scheduler")
     initialDictionary(tagManager)
+
+    // if not test, should delete
     tagManager
   }
 
-  def initialDictionary(tagManager: ActorRef) = {
+  def initialDictionary(tagManager: ActorRef): Future[Unit] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     //     load customer dictionary
     val query = BSONDocument("enable_flag" -> true)
@@ -39,8 +42,8 @@ object TagManager extends EnvLoader {
 
   // TagManager State Operation
   sealed trait ManagerCommand
-  case class Load(doc: CustomerDictionary) extends ManagerCommand
-  case class Register(doc: CustomerDictionary) extends ManagerCommand
+  case class Load(doc: TagDictionary) extends ManagerCommand
+  case class Register(doc: TagDictionary) extends ManagerCommand
   case class Delete(id: String) extends ManagerCommand
   case class Remove(id: String) extends ManagerCommand
 
@@ -49,7 +52,7 @@ object TagManager extends EnvLoader {
 
   sealed trait ManagerOperation
   //sealed trait TIOperation extends ManagerOperation
-  case class TagRegister(tagDic: CustomerDictionary) extends ManagerOperation
+  case class TagRegister(tagDic: TagDictionary) extends ManagerOperation
   case class TagMesAdded(id: String, tagMessage: Message) extends ManagerOperation
   case class TagMesUpdated(ti: TagInstance, actorRef: ActorRef) extends ManagerOperation
   case class TagInsDelete(id: String) extends ManagerOperation
@@ -68,7 +71,7 @@ object TagManager extends EnvLoader {
     def count: Int = state.size
     def getTMs(ti: TagInstance): Set[Message] = state(ti)
     def getTIs: Set[TagInstance] = state.keySet
-    def register(tagDic: CustomerDictionary): TIsRegistry =
+    def register(tagDic: TagDictionary): TIsRegistry =
       TIsRegistry(state + (TagInstance(tagDic.update_frequency.toUpperCase, tagDic.actorID) -> Set()))
 
     def getTI(id: String): Option[TagInstance] = {
@@ -127,8 +130,8 @@ object TagManager extends EnvLoader {
   }
 
   case class State(tagInstReg: TIsRegistry, tagMesReg: TMsRegistry) {
-    def register(tagDic: CustomerDictionary): State = State(tagInstReg.register(tagDic), tagMesReg)
-    def contains(tagDic: CustomerDictionary): Boolean = tagInstReg.contains(tagDic.actorID)
+    def register(tagDic: TagDictionary): State = State(tagInstReg.register(tagDic), tagMesReg)
+    def contains(tagDic: TagDictionary): Boolean = tagInstReg.contains(tagDic.actorID)
     def contains(message: Message): Boolean = tagMesReg.contains(message)
     def getTIs(message: Message): Set[TagInstance] = tagMesReg.getTIs(message)
     def getTIs: Set[TagInstance] = tagInstReg.getTIs
@@ -167,11 +170,11 @@ object TagManager extends EnvLoader {
 
 }
 
-class TagManager(kafkaConfig: Config) extends PersistentActor with ActorLogging {
+class TagManager extends PersistentActor with ActorLogging {
   import TagManager._
 
   var state: State = State(TIsRegistry(), TMsRegistry())
-  val kafkaActor = context.actorOf(Props(new MessageConsumer(kafkaConfig)), "messages-consumer")
+  context.actorOf(Props[MessageConsumer], "messages-consumer")
 
   override def persistenceId: String = "tag-manager"
 

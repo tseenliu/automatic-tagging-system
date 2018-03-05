@@ -2,8 +2,7 @@ package com.cathay.ddt.utils
 
 import com.cathay.ddt.kafka.{FrontierMessage, TagFinishMessage}
 import com.cathay.ddt.tagging.schema.TagMessage.{Message, SimpleTagMessage}
-import com.cathay.ddt.tagging.schema.{CustomerDictionary, TagMessage}
-import com.cathay.ddt.utils.sparkUtils.AdwTable
+import com.cathay.ddt.tagging.schema.{TagDictionary, TagMessage}
 
 
 /**
@@ -43,7 +42,7 @@ object MessageConverter extends CalendarConverter with EnvLoader {
   }
 
   // Convert to tagMessages using a mapping table
-  def CovertTagMessage(doc: CustomerDictionary): Unit = { }
+  def CovertTagMessage(doc: TagDictionary): Unit = { }
 
 
   // Convert frontier messages to tagMessages

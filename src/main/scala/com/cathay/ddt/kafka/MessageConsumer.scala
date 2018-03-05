@@ -1,26 +1,27 @@
 package com.cathay.ddt.kafka
 
-import akka.actor.{Actor, ActorLogging, Terminated}
-import cakesolutions.kafka.akka.{ConsumerRecords, KafkaConsumerActor}
+import akka.actor.{Actor, ActorLogging, ActorRef, Terminated}
+import cakesolutions.kafka.akka.{ConsumerRecords, Extractor, KafkaConsumerActor}
 import cakesolutions.kafka.akka.KafkaConsumerActor.{Confirm, Subscribe}
 import com.typesafe.config.Config
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.StringDeserializer
 import spray.json._
 import TagJsonProtocol._
-import com.cathay.ddt.utils.{MessageConverter, EnvLoader}
+import com.cathay.ddt.utils.{EnvLoader, MessageConverter}
 
 /**
   * Created by Tse-En on 2017/12/23.
   */
-class MessageConsumer(kafkaConfig: Config) extends Actor with ActorLogging with EnvLoader {
+class MessageConsumer extends Actor with ActorLogging with EnvLoader {
+  private val kafkaConfig: Config = getConfig("kafka")
   private val consumerConf = kafkaConfig.getConfig("kafka.consumer")
   private val topics: Array[String] = kafkaConfig.getStringList("tag.subscribe-topics").toArray().map(_.toString)
 
   // Records' type of [key, value]
-  val recordsExt = ConsumerRecords.extractor[String, String]
+  val recordsExt: Extractor[Any, ConsumerRecords[String, String]] = ConsumerRecords.extractor[String, String]
 
-  val consumer = context.actorOf(
+  val consumer: ActorRef = context.actorOf(
     KafkaConsumerActor.props(
       consumerConf,
       new StringDeserializer,
@@ -64,7 +65,5 @@ class MessageConsumer(kafkaConfig: Config) extends Actor with ActorLogging with 
       }
     }
   }
-
-
 
 }
