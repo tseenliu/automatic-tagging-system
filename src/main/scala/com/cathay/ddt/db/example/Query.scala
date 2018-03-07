@@ -11,9 +11,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 object Query extends App {
 
   val connection1 = MongoConnector.connection
-  val FBsonCollection = MongoConnector.dbFromConnection(connection1, "tag", "icustomer")
+  val FBsonCollection = MongoConnector.dbFromConnection(connection1, "tag", "scoretag")
 
-  val query2 = BSONDocument("_id" -> BSONObjectID("5a61c7d101000001000c7694"))
+  val query2 = BSONDocument("_id" -> BSONObjectID("5a59f9a90100000100d02158"))
   FBsonCollection.flatMap(x => MongoUtils.findOneDictionary(x, query2)).map { docList =>
     println(docList)
   }

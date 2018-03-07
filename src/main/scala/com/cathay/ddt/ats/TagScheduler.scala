@@ -15,6 +15,15 @@ import scala.collection.mutable.ListBuffer
 class TagScheduler extends Actor {
   import TagScheduler._
 
+  override def preStart(): Unit = {
+    println(s"[Info] ${self}: TagScheduler is [Start].")
+    self ! Create
+  }
+
+  override def postStop(): Unit = {
+    println(s"[Info] ${self}: TagScheduler is [Stop].")
+  }
+
 //  var HscPaths = new ListBuffer[String]()
   var scheduleList = new ListBuffer[ScheduleInstance]()
   var cancellable: Option[Cancellable] = None
@@ -37,30 +46,30 @@ class TagScheduler extends Actor {
   )
 
   val routerPool: ActorRef =
-    context.actorOf(RoundRobinGroup(HscPaths.toList).props(), "RoundRobinGroup")
+    context.actorOf(RoundRobinGroup(HscPaths).props(), "RoundRobinGroup")
 
   override def receive: Receive = {
     case Create =>
-      println("creating...")
       // call yarn rest api, and get number
+      println(s"[Info] TagScheduler is create [7] workers.")
       createSparkTagJob(7)
 
     case Schedule(instance) =>
       import scala.concurrent.ExecutionContext.Implicits.global
+      println(s"[Info] TagScheduler is received: Tag(${instance.dic.update_frequency}) ID[${instance.dic.actorID}]")
       scheduleList += instance
 
       if(cancellable.isDefined) {
-        println("killing...")
         cancellable.get.cancel()
-        println("restarting...")
+        println("[Info] TagScheduler Countdown timer is [Re-Start].")
         cancellable = Option(context.system.scheduler.scheduleOnce(10 seconds, self, RunInstances))
       } else {
-        println("starting...")
+        println("[Info] TagScheduler Countdown timer is [Start].")
         cancellable = Option(context.system.scheduler.scheduleOnce(10 seconds, self, RunInstances))
       }
 
     case RunInstances =>
-      println("running...")
+      println("[Info] TagScheduler is Submitting.")
       scheduleList.foreach { ins =>
         routerPool ! Run(ins)
       }

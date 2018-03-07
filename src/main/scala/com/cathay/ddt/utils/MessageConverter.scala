@@ -4,12 +4,21 @@ import com.cathay.ddt.kafka.{FrontierMessage, TagFinishMessage}
 import com.cathay.ddt.tagging.schema.TagMessage.{Message, SimpleTagMessage}
 import com.cathay.ddt.tagging.schema.{TagDictionary, TagMessage}
 
+import scala.collection.mutable.ListBuffer
+import scala.io.Source
+
 
 /**
   * Created by Tse-En on 2017/12/20.
   */
 object MessageConverter extends CalendarConverter with EnvLoader {
-//  val mappingFilePath = getConfig("hive").getString("hive.mapping-path")
+
+  //test
+  val mappingFilePath = getConfig("hive").getString("hive.mapping-path")
+  var sqlMList = new ListBuffer[(String, Message)]()
+  var kafkaMList = new ListBuffer[(String, String)]()
+
+
   var sqlMTable: Map[String, Message] = Map()
   var kafkaMTable: Map[String, String] = Map()
 
@@ -105,21 +114,27 @@ object MessageConverter extends CalendarConverter with EnvLoader {
 
   // parsing sql and get require value
   def getMessages(sql: String): Iterator[Message] = {
-//    val tagPattern = s"""([tag_id\\s]+)\\=(["'a-z\\-\\_A-Z\\s]+)""".r
-    val tagPattern = s"""([tag_id\\s]+)\\=(["'\\s]+)([\\-\\_a-zA-Z0-9]+)(["'\\s]+)""".r
-    val matches = tagPattern.findAllIn(sql)
+    val tablePattern = "(VP_BANK|vp_bank)\\.([a-z\\-\\_A-Z]+)".r
+    val matches = tablePattern.findAllIn(sql)
+    //    val tagPattern = s"""([tag_id\\s]+)\\=(["'\\s]+)([\\-\\_a-zA-Z0-9]+)(["'\\s]+)""".r
+    //    val matches = tagPattern.findAllIn(sql)
     val map = getSqlMTable
     var set = scala.collection.mutable.Set[Message]()
+//    matches.foreach{ x =>
+//      val tagPattern(a,b,c,d) = x
+//      set += map(c)
+//    }
     matches.foreach{ x =>
-      val tagPattern(a,b,c,d) = x
-      set += map(c)
+      val table = x.trim.split("\\.")(1)
+      set += map(table)
     }
     set.toIterator
   }
 
   def getSqlMTable: Map[String, Message] = {
     if (sqlMTable.isEmpty) {
-      initialADW()
+//      initialADW()
+      initialFromLocal()
       sqlMTable
     } else {
       sqlMTable
@@ -128,27 +143,28 @@ object MessageConverter extends CalendarConverter with EnvLoader {
 
   def getkafkaMTable: Map[String, String] = {
     if (kafkaMTable.isEmpty) {
-      initialADW()
+//      initialADW()
+      initialFromLocal()
       kafkaMTable
     } else {
       kafkaMTable
     }
   }
 
-//  def initialFromLocal(): Unit = {
-//    sqlMTable = Map()
-//    kafkaMTable = Map()
-//    for (line <- Source.fromFile(mappingFilePath).getLines) {
-//      val record = line.trim.split(",")
-//      val key = record(0)
-//      val value = record(1)
-//      val tmp = value.split(" ")
-//      kafkaMList += ((tmp(0), tmp(1)))
-//      sqlMList += ((key, SimpleTagMessage(tmp(1), tmp(0))))
-//    }
-//    sqlMTable = sqlMList.toMap
-//    kafkaMTable = kafkaMList.toMap
-//  }
+  def initialFromLocal(): Unit = {
+    sqlMTable = Map()
+    kafkaMTable = Map()
+    for (line <- Source.fromFile(mappingFilePath).getLines) {
+      val record = line.trim.split(",")
+      val key = record(0)
+      val value = record(1)
+      val tmp = value.split(" ")
+      kafkaMList += ((tmp(0), tmp(1)))
+      sqlMList += ((key, SimpleTagMessage(tmp(1), tmp(0))))
+    }
+    sqlMTable = sqlMList.toMap
+    kafkaMTable = kafkaMList.toMap
+  }
 
   def initialADW(): Unit = {
     val adw = new AdwTable()

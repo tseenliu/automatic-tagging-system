@@ -14,6 +14,14 @@ import com.cathay.ddt.utils.{EnvLoader, MessageConverter}
   * Created by Tse-En on 2017/12/23.
   */
 class MessageConsumer extends Actor with ActorLogging with EnvLoader {
+  override def preStart(): Unit = {
+    println(s"[Info] ${self}: MessageConsumer is [Start].")
+  }
+
+  override def postStop(): Unit = {
+    println(s"[Info] ${self}: MessageConsumer is [Stop].")
+  }
+
   private val kafkaConfig: Config = getConfig("kafka")
   private val consumerConf = kafkaConfig.getConfig("kafka.consumer")
   private val topics: Array[String] = kafkaConfig.getStringList("tag.subscribe-topics").toArray().map(_.toString)
@@ -48,12 +56,12 @@ class MessageConsumer extends Actor with ActorLogging with EnvLoader {
         // Parse records in Json format
         r.topic() match {
           case "frontier-adw" =>
-            println(r.value())
+            println(s"[Info] MessageConsumer is received: ${r.value()} from [frontier-adw] topic.")
             val message: FrontierMessage = r.value().parseJson.convertTo[FrontierMessage]
             val tagMessage = MessageConverter.CovertToTM(r.topic(), message)
             context.parent ! tagMessage
           case "hippo-finish" =>
-            println(r.value())
+            println(s"[Info] MessageConsumer is received: ${r.value()} from [hippo-finish] topic.")
             val message: TagFinishMessage = r.value().parseJson.convertTo[TagFinishMessage]
             val tagMessage = MessageConverter.CovertToTM(r.topic(), message)
             context.parent ! message

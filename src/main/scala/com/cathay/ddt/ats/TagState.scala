@@ -81,7 +81,8 @@ object TagState {
   case class Metadata(override val daily: Map[String, Boolean], override val monthly: Map[String, Boolean]) extends Data {
     var monthlyAlreadyRun: Option[String] = None
     override def toString: String = {
-      s"monthly: ${monthlyAlreadyRun.isDefined}\ndaily: $daily\nmonthly: $monthly"
+      s"===================================================================" +
+        s"\nMonth is Run: ${monthlyAlreadyRun.getOrElse("None")}\ndaily: $daily\nmonthly: $monthly"
     }
   }
 
@@ -127,12 +128,12 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
   override def preStart(): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
     context.system.scheduler.schedule(0 seconds, 1 seconds, self, Timeout(etlTime))
-    println(s"[Info] Tag $frequency, $id is already serving...")
+    println(s"[Info] ${self}: Tag($frequency),ID($id) is [UP]. ")
     self ! RevivalCheck
   }
 
   override def postStop(): Unit = {
-    println(s"[Info] Tag $frequency, $id is already stopping...")
+    println(s"[Info] ${self}: Tag($frequency), ID($id) is [DOWN].")
   }
 
   override def persistenceId: String = id
@@ -249,7 +250,8 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
         if (stateData.isNull) sender() ! false
         else sender() ! true
         saveStateSnapshot()
-        println(stateData)
+//        println(s"[Info] Tag($frequency, ID($id):")
+//        println(stateData)
       }
   }
 
@@ -258,6 +260,7 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
       stay applying RequiredMessages(tmSet) andThen { _ =>
         sender() ! true
         saveStateSnapshot()
+        println(s"[Info] Tag($frequency, ID($id):")
         println(stateData)
       }
 
@@ -267,12 +270,14 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
           stay applying ReceivedMessage(tm, Daily) andThen { _ =>
             saveStateSnapshot()
             self ! Check
+            println(s"[Info] Tag($frequency, ID($id):")
             println(stateData)
           }
         case "M" =>
           stay applying ReceivedMessage(tm, Monthly) andThen{ _ =>
             saveStateSnapshot()
             self ! Check
+            println(s"[Info] Tag($frequency, ID($id):")
             println(stateData)
           }
       }
@@ -308,23 +313,24 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
         frequency match {
           case "M" =>
             // sender or run
-            println(getComposedSql(Monthly, dic))
+//            println(getComposedSql(Monthly, dic))
             // if success, produce and update
-            context.actorSelection("../tag-scheduler") ! Schedule(ScheduleInstance(getComposedSql(Monthly, dic), dic))
+            context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(getComposedSql(Monthly, dic), dic))
             stay()
           case "D" =>
-            println(getComposedSql(Daily, dic))
-            context.actorSelection("../tag-scheduler") ! Schedule(ScheduleInstance(getComposedSql(Daily, dic), dic))
+//            println(getComposedSql(Daily, dic))
+            context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(getComposedSql(Daily, dic), dic))
             stay()
         }
       }else {
         // without time composing
-        println(dic.sql)
-        context.actorSelection("../tag-scheduler") ! Schedule(ScheduleInstance(getComposedSql(Daily, dic), dic))
+//        println(dic.sql)
+        context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(getComposedSql(Daily, dic), dic))
         stay()
       }
 
     case Event(Report(frequencyType, dic), _) =>
+      println(s"[Info] Tag($frequency) ID[${dic.actorID}] is producing finish topic.")
       // if success, produce and update
       MessageProducer.getProducer.sendToFinishTopic(frequencyType, dic)
       updateAndCheck(dic)
@@ -351,12 +357,13 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
       }else goto(Receiving)
 
     case Event(RevivalCheck, _) =>
-      println(s"ANS: ${stateData.asInstanceOf[Metadata].monthlyAlreadyRun}")
+//      println(s"ANS: ${stateData.asInstanceOf[Metadata].monthlyAlreadyRun}")
 
       if(stateData.asInstanceOf[Metadata].monthlyAlreadyRun.isEmpty) {
         goto(Receiving)
 
       } else if(stateData.asInstanceOf[Metadata].monthlyAlreadyRun.get == getLastMonth) {
+        println(s"[Info] Tag($frequency) ID[$id] is already run in this Month[${stateData.asInstanceOf[Metadata].monthlyAlreadyRun}].")
         context.parent ! Cmd(Delete(id))
         stop()
 
@@ -391,18 +398,21 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
 
   whenUnhandled {
     case Event(SaveSnapshotSuccess(metadata), _) ⇒
-      println(stateName)
+//      println(stateName)
       stay()
 
     case Event(SaveSnapshotFailure(metadata, reason), _) ⇒
-      println(s"save snapshot failed and failure is $reason")
+//      println(s"save snapshot failed and failure is $reason")
       stay()
 
     case Event(RevivalCheck, _) =>
-      println(s"Tag $frequency, $id: This state $stateName don't need to Revive")
+//      println(s"Tag $frequency, $id: This state $stateName don't need to Revive")
       stay()
 
     case Event(Requirement(tmSet), _) =>
+      stay()
+
+    case Event(Timeout(time), _) =>
       stay()
   }
 }

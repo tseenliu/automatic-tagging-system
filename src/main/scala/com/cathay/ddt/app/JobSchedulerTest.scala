@@ -13,7 +13,7 @@ object JobSchedulerTest extends App {
   // testing
   val tag = TagDictionary(
     channel_type = "bank",
-    channel_item = "信用卡/簽帳卡",
+    channel_name = "信用卡/簽帳卡",
     tag_type = "刷卡消費",
     tag_name = "超市購物",
     sql = """
@@ -35,7 +35,7 @@ object JobSchedulerTest extends App {
     traced = Option(3),
     description = "超市購買族群",
     enable_flag = true,
-    score_method = "C",
+    score_option = "C",
     attribute = "behavior",
     creator = "Jenny",
     is_focus = true)

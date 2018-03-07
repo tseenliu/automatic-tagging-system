@@ -173,6 +173,14 @@ object TagManager extends EnvLoader {
 class TagManager extends PersistentActor with ActorLogging {
   import TagManager._
 
+  override def preStart(): Unit = {
+    println(s"[Info] ${self}: TagManager is [Start].")
+  }
+
+  override def postStop(): Unit = {
+    println(s"[Info] ${self}: TagManager is [Stop].")
+  }
+
   var state: State = State(TIsRegistry(), TMsRegistry())
   context.actorOf(Props[MessageConsumer], "messages-consumer")
 
@@ -263,7 +271,7 @@ class TagManager extends PersistentActor with ActorLogging {
       println(s"The Current state of counter is $state")
 
     case SaveSnapshotSuccess(metadata) =>
-      println(s"save snapshot succeed.")
+//      println(s"save snapshot succeed.")
     case SaveSnapshotFailure(metadata, reason) =>
       println(s"save snapshot failed and failure is $reason")
 
