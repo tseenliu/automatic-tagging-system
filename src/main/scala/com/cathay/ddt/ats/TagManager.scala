@@ -34,7 +34,8 @@ object TagManager extends EnvLoader {
   def initialDictionary(tagManager: ActorRef): Future[Unit] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     //     load customer dictionary
-    val query = BSONDocument("enable_flag" -> true)
+    // "disable_flag" -> false
+    val query = BSONDocument()
     MongoConnector.getTDCollection.flatMap(tagColl => MongoUtils.findDictionaries(tagColl, query)).map { docList =>
       docList.foreach(TD => tagManager ! Cmd(Load(TD)))
     }
@@ -250,7 +251,7 @@ class TagManager extends PersistentActor with ActorLogging {
           }
         }
       } else{
-        println(s"${tagDic._id} is already exist.")
+        println(s"tagID: ${tagDic.actorID} is already exist.")
       }
 
     case tagMessage: TagMessage  =>

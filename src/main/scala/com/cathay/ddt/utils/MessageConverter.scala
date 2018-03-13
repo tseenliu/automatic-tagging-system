@@ -57,7 +57,7 @@ object MessageConverter extends CalendarConverter with EnvLoader {
   // Convert frontier messages to tagMessages
   def CovertToTM(topic: String, input: FrontierMessage): TagMessage = {
     val value = s"${input.db}.${input.table}"
-    val frequency = getkafkaMTable(value)
+    val frequency = getKafkaMTable(value)
     frequency.toUpperCase() match {
       case "M" =>
         TagMessage(
@@ -114,7 +114,7 @@ object MessageConverter extends CalendarConverter with EnvLoader {
 
   // parsing sql and get require value
   def getMessages(sql: String): Iterator[Message] = {
-    val tablePattern = "(VP_BANK|vp_bank)\\.([a-z\\-\\_A-Z]+)".r
+    val tablePattern = "(VP_BANK|vp_bank)\\.([a-z\\-\\_A-Z0-9]+)".r
     val matches = tablePattern.findAllIn(sql)
     //    val tagPattern = s"""([tag_id\\s]+)\\=(["'\\s]+)([\\-\\_a-zA-Z0-9]+)(["'\\s]+)""".r
     //    val matches = tagPattern.findAllIn(sql)
@@ -133,18 +133,18 @@ object MessageConverter extends CalendarConverter with EnvLoader {
 
   def getSqlMTable: Map[String, Message] = {
     if (sqlMTable.isEmpty) {
-//      initialADW()
-      initialFromLocal()
+      initialADW()
+//      initialFromLocal()
       sqlMTable
     } else {
       sqlMTable
     }
   }
 
-  def getkafkaMTable: Map[String, String] = {
+  def getKafkaMTable: Map[String, String] = {
     if (kafkaMTable.isEmpty) {
-//      initialADW()
-      initialFromLocal()
+      initialADW()
+//      initialFromLocal()
       kafkaMTable
     } else {
       kafkaMTable
@@ -167,12 +167,11 @@ object MessageConverter extends CalendarConverter with EnvLoader {
   }
 
   def initialADW(): Unit = {
-    val adw = new AdwTable()
     sqlMTable = Map()
     kafkaMTable = Map()
-    adw.initial()
-    sqlMTable = adw.getSqlMList.toMap
-    kafkaMTable = adw.getKafkaMList.toMap
+    ViewMapper.getViewMapper.initial()
+    sqlMTable = ViewMapper.getViewMapper.getSqlMList.toMap
+    kafkaMTable = ViewMapper.getViewMapper.getKafkaMList.toMap
   }
 
   def printSql(): Unit = {
@@ -181,7 +180,7 @@ object MessageConverter extends CalendarConverter with EnvLoader {
   }
 
   def printKafka(): Unit = {
-    val m = getkafkaMTable
+    val m = getKafkaMTable
     m.foreach(println(_))
   }
 

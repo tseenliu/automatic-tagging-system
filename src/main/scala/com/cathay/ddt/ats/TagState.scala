@@ -325,7 +325,7 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
       }else {
         // without time composing
 //        println(dic.sql)
-        context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(getComposedSql(Daily, dic), dic))
+        context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(dic.sql, dic))
         stay()
       }
 
@@ -386,7 +386,7 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
 
   def getDictionary: Future[TagDictionary] = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    val query = BSONDocument("_id" -> BSONObjectID(id))
+    val query = BSONDocument("tag_id" -> id)
     MongoConnector.getTDCollection.flatMap(x => MongoUtils.findOneDictionary(x, query))
   }
 

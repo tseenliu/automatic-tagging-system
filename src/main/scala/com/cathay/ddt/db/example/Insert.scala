@@ -11,12 +11,15 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 object Insert extends App {
   val connection1 = MongoConnector.connection
-  val FBsonCollection = MongoConnector.dbFromConnection(connection1, "tag", "icustomer")
+  val FBsonCollection = MongoConnector.dbFromConnection(connection1, "tag", "scoretag")
 
-  for (i <- 4 to 5) {
+  def randomString(length: Int) = scala.util.Random.alphanumeric.take(length).mkString
+
+  for (i <- 4 to 6) {
     val tmp = TagDictionary(
+      tag_id = randomString(10),
       channel_type = "bank",
-      channel_name = "信用卡/簽帳卡",
+      channel_item = "信用卡/簽帳卡",
       tag_type = "刷卡消費",
       tag_name = "超市購物",
 //      segment_type = "刷卡消費",
@@ -36,13 +39,15 @@ object Insert extends App {
                 |AND concat(substr('''$end_date''',1,4),substr('''$end_date''',6,2))
               """.stripMargin.trim,
       update_frequency = "M",
-      started = None,
-      traced = None,
+      started = Option(-i),
+      traced = Option(i),
       description = "超市購買族群",
-      enable_flag = true,
-      score_option = "C",
+      disable_flag = Option(false),
+      create_time = "2018-03-12",
+      update_time = "2018-03-12",
+      score_method = "C",
       attribute = "behavior",
-      creator = "Jenny",
+      creator = "Jerry",
       is_focus = true)
 
       FBsonCollection.flatMap( coll => MongoUtils.insert(coll, tmp) ).onSuccess {

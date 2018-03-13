@@ -1,7 +1,7 @@
 package com.cathay.ddt.tagging.core
 
 import akka.actor.Actor
-import com.cathay.ddt.ats.TagScheduler.ScheduleInstance
+import com.cathay.ddt.ats.TagScheduler.{FinishInstance, ScheduleInstance}
 import com.cathay.ddt.ats.TagState.{Daily, Monthly, Report}
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.SparkSession
@@ -11,8 +11,8 @@ import sys.process._
 /**
   * Created by Tse-En on 2018/1/29.
   */
-class TaggingScript extends Actor {
-  import TaggingScript._
+class TaggingRunner extends Actor {
+  import TaggingRunner._
 
   override def receive: Receive = {
     case msg: Run =>
@@ -25,8 +25,12 @@ class TaggingScript extends Actor {
 
       //println(execute, stdout, stderr)
       msg.instance.dic.update_frequency.toUpperCase() match {
-        case "M" => context.actorSelection(s"/user/tag-manager/${msg.instance.dic.actorID}") ! Report(Monthly, msg.instance.dic)
-        case "D" => context.actorSelection(s"/user/tag-manager/${msg.instance.dic.actorID}") ! Report(Daily, msg.instance.dic)
+        case "M" =>
+//          context.parent ! FinishInstance(Monthly, msg.instance)
+          context.actorSelection(s"/user/tag-manager/${msg.instance.dic.actorID}") ! Report(Monthly, msg.instance.dic)
+        case "D" =>
+//          context.parent ! FinishInstance(Daily, msg.instance)
+          context.actorSelection(s"/user/tag-manager/${msg.instance.dic.actorID}") ! Report(Daily, msg.instance.dic)
       }
     case SLEEP =>
       println(s"${self}: deading...")
@@ -34,7 +38,9 @@ class TaggingScript extends Actor {
   }
 }
 
-object TaggingScript {
+object TaggingRunner {
+  case class BashHandler(exitCode: Int, stdout: StringBuilder, stderr: StringBuilder)
+
   case class Run(instance: ScheduleInstance)
   case object SLEEP
 }

@@ -7,10 +7,8 @@ import com.cathay.ddt.tagging.schema.TagMessage.{Message, SimpleTagMessage}
 
 import scala.collection.mutable.ListBuffer
 
-class AdwTable {
-  var sqlMList = new ListBuffer[(String, Message)]()
-  var kafkaMList = new ListBuffer[(String, String)]()
-
+class ViewMapper {
+  import ViewMapper._
   val driverName = "org.apache.hive.jdbc.HiveDriver"
   Class.forName(driverName)
 
@@ -27,8 +25,9 @@ class AdwTable {
 
   def initial(): Unit = {
     val res = stmt.executeQuery(ParsingSQLCommand)
+
     while (res.next()) {
-      if(res.getString(1).contains("\\.")) {
+      if(res.getString(1).contains(".")) {
         val view = res.getString(1).split("\\.")(1)
         val db = res.getString(2)
         val table =  res.getString(3)
@@ -53,4 +52,12 @@ class AdwTable {
 
   def getKafkaMList: ListBuffer[(String, String)] = kafkaMList
   def getSqlMList: ListBuffer[(String, TagMessage.Message)] = sqlMList
+}
+
+object ViewMapper{
+  private final val viewMapper = new ViewMapper
+  def getViewMapper: ViewMapper = viewMapper
+
+  val sqlMList = new ListBuffer[(String, Message)]()
+  val kafkaMList = new ListBuffer[(String, String)]()
 }

@@ -17,8 +17,9 @@ object kafkaTest extends App with EnvLoader {
 
 
   val dic = TagDictionary(
+    tag_id = "asfsdregfgdsgsdfgdsgert1345353454363redfsf34g",
     channel_type = "bank",
-    channel_name = "信用卡/簽帳卡",
+    channel_item = "信用卡/簽帳卡",
     tag_type = "刷卡消費",
     tag_name = "超市購物",
     sql = """
@@ -39,8 +40,10 @@ object kafkaTest extends App with EnvLoader {
     started = Option(-6),
     traced = Option(6),
     description = "超市購買族群",
-    enable_flag = true,
-    score_option = "C",
+    disable_flag = Option(false),
+    create_time = "2018-03-12",
+    update_time = "2018-03-12",
+    score_method = "C",
     attribute = "behavior",
     creator = "Jenny",
     is_focus = true)
