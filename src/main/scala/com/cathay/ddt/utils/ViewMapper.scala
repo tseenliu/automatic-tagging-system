@@ -39,8 +39,9 @@ class ViewMapper {
         if(ref == "v") addItem("D", view, s"$db.$table")
         else if (month == "v" && day == "v") addItem("D", view, s"$db.$table")
         else if(month == "v") addItem("M", view, s"$db.$table")
+        else if(day == "v") addItem("D", view, s"$db.$table")
         else if(year == "v") addItem("Y", view, s"$db.$table")
-        else addItem("D", view, s"$db.$table")
+//        else addItem("D", view, s"$db.$table")
       }
     }
   }

@@ -64,11 +64,13 @@ object TagState {
       d && m
     }
 
+    // check monthly is clear or not, when run successful
     def isMonthlyNull: Boolean = {
-      val isFalse: Boolean = monthly.values.toSet.head
-      if(monthly.values.toSet.size == 1 && !isFalse) {
-        true
-      }else false
+      if(monthly.nonEmpty) {
+        val isFalse: Boolean = monthly.values.toSet.head
+        if(monthly.values.toSet.size == 1 && !isFalse) true
+        else true
+      } else true
     }
 
   }
@@ -82,7 +84,7 @@ object TagState {
     var monthlyAlreadyRun: Option[String] = None
     override def toString: String = {
       s"===================================================================" +
-        s"\nMonth is Run: ${monthlyAlreadyRun.getOrElse("None")}\ndaily: $daily\nmonthly: $monthly"
+        s"\nDaily: $daily\nMonthly[${monthlyAlreadyRun.getOrElse("None")}]: $monthly\n"
     }
   }
 
@@ -161,6 +163,7 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
           m.update_frequency match {
             case "M" => monthly += (m.value -> currentData.monthly.getOrElse(m.value, false))
             case "D" => daily += (m.value -> currentData.daily.getOrElse(m.value, false))
+            case "Y" =>
           }
         }
         Metadata(daily.toMap, monthly.toMap)
@@ -260,8 +263,8 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
       stay applying RequiredMessages(tmSet) andThen { _ =>
         sender() ! true
         saveStateSnapshot()
-        println(s"[Info] Tag($frequency, ID($id):")
-        println(stateData)
+        println(s"[Info] Tag($frequency, ID($id):\n$stateData")
+//        println(stateData)
       }
 
     case Event(Receipt(tm), _) =>
@@ -270,15 +273,13 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
           stay applying ReceivedMessage(tm, Daily) andThen { _ =>
             saveStateSnapshot()
             self ! Check
-            println(s"[Info] Tag($frequency, ID($id):")
-            println(stateData)
+            println(s"[Info] Tag($frequency, ID($id):\n$stateData")
           }
         case "M" =>
           stay applying ReceivedMessage(tm, Monthly) andThen{ _ =>
             saveStateSnapshot()
             self ! Check
-            println(s"[Info] Tag($frequency, ID($id):")
-            println(stateData)
+            println(s"[Info] Tag($frequency, ID($id):\n$stateData")
           }
       }
 

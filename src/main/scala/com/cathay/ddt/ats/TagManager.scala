@@ -104,6 +104,10 @@ object TagManager extends EnvLoader {
       val newState = state - tagIns + (dTagIns -> messageSet)
       TIsRegistry(newState)
     }
+
+    def getNumsOfTags: Int = {
+      state.size
+    }
   }
 
   case class TMsRegistry(state: Map[Message, Set[TagInstance]] = Map()) {
@@ -127,6 +131,10 @@ object TagManager extends EnvLoader {
         newState = newState + (mes -> newSet)
         TMsRegistry(newState)
       }
+    }
+
+    def getNumsOfTables: Int = {
+      state.size
     }
   }
 
@@ -166,6 +174,13 @@ object TagManager extends EnvLoader {
         } else state
       }
       registry
+    }
+
+    def ShowTagInfo(): Unit = {
+      println(s"===================================================================" +
+        s"\n[Info] Tag Dictionary loading finished." +
+        s"\nTotal Tags:${tagInstReg.getNumsOfTags}" +
+        s"\nTotal Tables:${tagMesReg.getNumsOfTables}\n")
     }
   }
 
@@ -269,7 +284,8 @@ class TagManager extends PersistentActor with ActorLogging {
       }
 
     case Cmd(ShowState) =>
-      println(s"The Current state of counter is $state")
+      state.ShowTagInfo()
+//      println(s"The Current state of counter is $state")
 
     case SaveSnapshotSuccess(metadata) =>
 //      println(s"save snapshot succeed.")

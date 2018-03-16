@@ -24,7 +24,10 @@ class MessageConsumer extends Actor with ActorLogging with EnvLoader {
 
   private val kafkaConfig: Config = getConfig("kafka")
   private val consumerConf = kafkaConfig.getConfig("kafka.consumer")
-  private val topics: Array[String] = kafkaConfig.getStringList("tag.subscribe-topics").toArray().map(_.toString)
+  private val subscribeTopics: Array[String] = kafkaConfig.getStringList("tag.subscribe-topics").toArray().map(_.toString)
+  private val publishTopic = kafkaConfig.getString("tag.publish-topic")
+
+  val frontier = subscribeTopics.toSet -- Set(publishTopic)
 
   // Records' type of [key, value]
   val recordsExt: Extractor[Any, ConsumerRecords[String, String]] = ConsumerRecords.extractor[String, String]
@@ -37,7 +40,7 @@ class MessageConsumer extends Actor with ActorLogging with EnvLoader {
       self
     ), "Tag-Reporter"
   )
-  consumer ! Subscribe.AutoPartition(topics)
+  consumer ! Subscribe.AutoPartition(subscribeTopics)
   context.watch(consumer)
 
   override def receive: Receive = {
@@ -55,13 +58,13 @@ class MessageConsumer extends Actor with ActorLogging with EnvLoader {
       try {
         // Parse records in Json format
         r.topic() match {
-          case "frontier-adw" =>
-            println(s"[Info] MessageConsumer is received: ${r.value()} from [frontier-adw] topic.")
+          case m if frontier.contains(m) =>
+            println(s"[Info] MessageConsumer is received: ${r.value()} from [$m] topic.")
             val message: FrontierMessage = r.value().parseJson.convertTo[FrontierMessage]
             val tagMessage = MessageConverter.CovertToTM(r.topic(), message)
             context.parent ! tagMessage
-          case "hippo-finish" =>
-            println(s"[Info] MessageConsumer is received: ${r.value()} from [hippo-finish] topic.")
+          case m if m == publishTopic =>
+            println(s"[Info] MessageConsumer is received: ${r.value()} from [$m] topic.")
             val message: TagFinishMessage = r.value().parseJson.convertTo[TagFinishMessage]
             val tagMessage = MessageConverter.CovertToTM(r.topic(), message)
             context.parent ! message
@@ -69,7 +72,7 @@ class MessageConsumer extends Actor with ActorLogging with EnvLoader {
       } catch {
         case e: Exception =>
           println(e)
-          log.error(s"${r.value()} not a tagging message format")
+          log.error(s"${r.value()} not a correct format")
       }
     }
   }
