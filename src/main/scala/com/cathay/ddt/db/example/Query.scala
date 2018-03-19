@@ -13,7 +13,7 @@ object Query extends App {
   val connection1 = MongoConnector.connection
   val FBsonCollection = MongoConnector.dbFromConnection(connection1, "tag", "scoretag")
 
-  val query2 = BSONDocument("_id" -> BSONObjectID("5a59f9a90100000100d02158"))
+  val query2 = BSONDocument("_id" -> BSONObjectID("5aa7378801000001002601bd"))
   FBsonCollection.flatMap(x => MongoUtils.findOneDictionary(x, query2)).map { docList =>
     println(docList)
   }
