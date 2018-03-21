@@ -97,7 +97,7 @@ class TagScheduler extends Actor {
     case FinishInstance(frequencyType, instance) =>
 //      instanceList -= instance
 //      totalNumIns += 1
-      context.actorSelection(s"/user/tag-manager/${instance.dic.actorID}") ! Report(frequencyType, instance.dic)
+      context.actorSelection(s"/user/tag-manager/${instance.dic.actorID}") ! Report(success = true, frequencyType, instance.dic)
       if(instanceList.nonEmpty) {
         self ! RunInstances
       }

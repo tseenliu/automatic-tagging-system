@@ -1,6 +1,6 @@
 package com.cathay.ddt.db
 
-import com.cathay.ddt.tagging.schema.{TagDictionary, Type}
+import com.cathay.ddt.tagging.schema.{TagDictionary, TagType}
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader, BSONDocumentWriter, Macros}
 
 class TagDictionaryExtension {
@@ -9,15 +9,15 @@ class TagDictionaryExtension {
 //  implicit val writer = Macros.writer[TagDictionary]
 
 
-  implicit object SimpleAlbumWriter extends BSONDocumentWriter[Type] {
-    def write(album: Type): BSONDocument = BSONDocument(
+  implicit object SimpleAlbumWriter extends BSONDocumentWriter[TagType] {
+    def write(album: TagType): BSONDocument = BSONDocument(
       "type_L1" -> album.type_L1,
       "type_L2" -> album.type_L2)
   }
 
-  implicit object SimpleAlbumReader extends BSONDocumentReader[Type] {
-    def read(doc: BSONDocument): Type = {
-      Type(
+  implicit object SimpleAlbumReader extends BSONDocumentReader[TagType] {
+    def read(doc: BSONDocument): TagType = {
+      TagType(
         doc.getAs[String]("type_L1").get,
         doc.getAs[String]("type_L2").get)
     }
@@ -50,7 +50,7 @@ class TagDictionaryExtension {
       doc.getAs[String]("tag_id").get,
       doc.getAs[String]("channel_type").get,
       doc.getAs[String]("channel_item").get,
-      doc.getAs[List[Type]]("tag_type").toList.flatten,
+      doc.getAs[List[TagType]]("tag_type").toList.flatten,
       doc.getAs[String]("tag_name").get,
       doc.getAs[String]("sql").get,
       doc.getAs[String]("update_frequency").get,

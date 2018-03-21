@@ -26,5 +26,7 @@ libraryDependencies ++= Seq(
   "org.apache.hive" % "hive-jdbc" % "0.13.1",
   "net.cakesolutions" %% "scala-kafka-client" % "0.9.0.0" excludeAll(ExclusionRule(organization = "org.slf4j")),
   "net.cakesolutions" %% "scala-kafka-client-akka" % "0.9.0.0" excludeAll(ExclusionRule(organization = "org.slf4j")),
-  "io.spray" %%  "spray-json" % "1.3.3"
+  "io.spray" %%  "spray-json" % "1.3.3",
+
+  "org.apache.hadoop" % "hadoop-client" % "2.7.0"
 )

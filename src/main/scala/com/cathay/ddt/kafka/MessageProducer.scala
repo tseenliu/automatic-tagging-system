@@ -2,7 +2,7 @@ package com.cathay.ddt.kafka
 
 import cakesolutions.kafka.{KafkaProducer, KafkaProducerRecord}
 import com.cathay.ddt.tagging.schema.TagDictionary
-import com.cathay.ddt.utils.{CalendarConverter, EnvLoader}
+import com.cathay.ddt.utils.CalendarConverter
 import com.typesafe.config.Config
 import org.apache.kafka.common.serialization.StringSerializer
 import spray.json._
@@ -12,7 +12,7 @@ import org.apache.kafka.clients.producer.RecordMetadata
 
 import scala.concurrent.Future
 
-class MessageProducer extends CalendarConverter with EnvLoader {
+class MessageProducer extends CalendarConverter {
   private val kafkaConfig: Config = getConfig("kafka")
 
   private val producerConfig = kafkaConfig.getConfig("kafka.producer")

@@ -1,10 +1,8 @@
 package com.cathay.ddt.db.example
 
-import com.cathay.ddt.db.{MongoConnector, MongoUtils}
-import com.cathay.ddt.tagging.schema.{TagDictionary, Type}
-import reactivemongo.bson.{BSON, BSONDocument}
-
-import scala.concurrent.ExecutionContext.Implicits.global
+import com.cathay.ddt.db.MongoConnector
+import com.cathay.ddt.tagging.schema.{TagDictionary, TagType}
+import spray.json._
 
 /**
   * Created by Tse-En on 2017/12/12.
@@ -64,7 +62,7 @@ object Insert extends App {
     tag_id = randomString(20),
     channel_type = "bank",
     channel_item = "信用卡/簽帳卡",
-    tag_type = List(Type("D","d"), Type("E","e")),
+    tag_type = List(TagType("D","d"), TagType("E","e")),
     tag_name = "超市購物",
     sql = """
             |select
@@ -81,26 +79,35 @@ object Insert extends App {
             |AND concat(substr('''$end_date''',1,4),substr('''$end_date''',6,2))
           """.stripMargin.trim,
     update_frequency = "M",
-    started = Option(-4),
-    traced = Option(4),
+    started = None,
+    traced = None,
     description = "超市購買族群",
     disable_flag = Option(false),
     create_time = "2018-03-12",
     update_time = "2018-03-12",
-    score_method = "C",
+    score_method = "Z",
     attribute = "behavior",
-    creator = "Alex",
+    creator = "Jasmine",
     is_focus = true)
+
+
+  import com.cathay.ddt.tagging.schema.TagDictionaryProtocol._
+
+  val json = neilYoung.toJson
+  println(json.prettyPrint)
+
+  val td = json.convertTo[TagDictionary]
+  println(td)
 
 //  FBsonCollection.flatMap( coll => MongoUtils.insert(coll, neilYoung) ).onSuccess {
 //    case result =>
 //      println(s"successfully or not: $result")
 //  }
 
-  val query = BSONDocument()
-  FBsonCollection.flatMap(x => MongoUtils.findDictionaries(x, query)).map { docList =>
-    docList.foreach(TD => println(TD))
-  }
+//  val query = BSONDocument("creator" -> "Jasmine")
+//  FBsonCollection.flatMap(x => MongoUtils.findDictionaries(x, query)).map { docList =>
+//    docList.foreach(TD => println(TD))
+//  }
 
 
 

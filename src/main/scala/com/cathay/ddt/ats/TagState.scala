@@ -12,11 +12,14 @@ import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import com.cathay.ddt.kafka.MessageProducer
 import com.cathay.ddt.tagging.schema.{TagDictionary, TagMessage}
 import com.cathay.ddt.tagging.schema.TagMessage.{Message, SimpleTagMessage}
-import com.cathay.ddt.utils.CalendarConverter
-import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import com.cathay.ddt.utils.{CalendarConverter, HdfsWriter}
+import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import com.cathay.ddt.tagging.schema.TagDictionaryProtocol._
+import spray.json._
+
 
 
 /**
@@ -117,7 +120,7 @@ object TagState {
   case class Receipt(tagMessage: TagMessage)
   case object Check
   case object Launch
-  case class Report(frequencyType: FrequencyType, dic: TagDictionary)
+  case class Report(success: Boolean, frequencyType: FrequencyType, dic: TagDictionary)
   case object Stop
   case object RevivalCheck
   case class Timeout(time: String)
@@ -178,48 +181,15 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
         } else {
           currentData
         }
-      // t-1 month, t-2 day -> true
-      //        tm.kafkaTopic match {
-      //          case "frontier-adw" =>
-      //            if(tm.yyyymmdd.contains(getDailyDate)) {
-      //              // partition
-      //              Metadata(currentData.daily + (tm.value -> true), currentData.monthly)
-      //            }else if(tm.yyyymm == tm.yyyymmdd){
-      //              // 代碼
-      //              Metadata(currentData.daily + (tm.value -> true), currentData.monthly)
-      //            } else {
-      //              currentData
-      //            }
-      //          case "hippo-finish" =>
-      //            if(tm.yyyymmdd.contains(getCurrentDate)) {
-      //              Metadata(currentData.daily + (tm.value -> true), currentData.monthly)
-      //            }else {
-      //              currentData
-      //            }
 
       case ReceivedMessage(tm, Monthly) =>
         if(tm.yyyymm.contains(getLastMonth))
           Metadata(currentData.daily, currentData.monthly + (tm.value -> true))
         else currentData
-      // t-1 month, t-2 day -> true
-      //        tm.kafkaTopic match {
-      //          case "frontier-adw" =>
-      //            if(tm.yyyymm.contains(getLastMonth))
-      //              Metadata(currentData.daily, currentData.monthly + (tm.value -> true))
-      //            else currentData
-      //          case "hippo-finish" =>
-      //            if(tm.yyyymm.contains(getCurrentMonth))
-      //              Metadata(currentData.daily, currentData.monthly + (tm.value -> true))
-      //            else currentData
-      //        }
 
       case UpdatedMessages(Daily) =>
         if (currentData.monthly.nonEmpty & currentData.daily.nonEmpty) {
-          // if(last day) reset for next new month
-//          if(getCurrentDate == getDayOfMonth(numsOfDelayDate)) Metadata(resetDaily, resetMonthly)
-          // keep monthly reset daily
           Metadata(resetDaily, currentData.monthly)
-
         }else {
           Metadata(resetDaily, resetMonthly)
         }
@@ -314,27 +284,38 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
         frequency match {
           case "M" =>
             // sender or run
-//            println(getComposedSql(Monthly, dic))
             // if success, produce and update
-            context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(getComposedSql(Monthly, dic), dic))
+            val composeTd = getComposedSql(Monthly, dic)
+            val tdJson = composeTd.toJson
+            HdfsWriter.write(fileName = s"${composeTd.tag_id}_${getCurrentDate}", data = tdJson.prettyPrint.getBytes)
+            context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(composeTd.sql, dic))
             stay()
           case "D" =>
-//            println(getComposedSql(Daily, dic))
-            context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(getComposedSql(Daily, dic), dic))
+            val composeTd = getComposedSql(Daily, dic)
+            val tdJson = composeTd.toJson
+            HdfsWriter.write(fileName = s"${composeTd.tag_id}_${getCurrentDate}", data = tdJson.prettyPrint.getBytes)
+            context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(composeTd.sql, dic))
             stay()
         }
       }else {
         // without time composing
-//        println(dic.sql)
+        HdfsWriter.write(fileName = s"${dic.tag_id}_${getCurrentDate}", data = dic.toJson.prettyPrint.getBytes)
         context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(dic.sql, dic))
         stay()
       }
 
-    case Event(Report(frequencyType, dic), _) =>
+    case Event(Report(success, frequencyType, dic), _) =>
       println(s"[Info] Tag($frequency) ID[${dic.actorID}] is producing finish topic.")
       // if success, produce and update
-      MessageProducer.getProducer.sendToFinishTopic(frequencyType, dic)
-      updateAndCheck(dic)
+      if(success) {
+        // remove hdfs json
+        MessageProducer.getProducer.sendToFinishTopic(frequencyType, dic)
+        updateAndCheck(dic)
+      }else {
+        // TODO fix
+        MessageProducer.getProducer.sendToFinishTopic(frequencyType, dic)
+        updateAndCheck(dic)
+      }
 
   }
   def updateAndCheck(dic: TagDictionary): PersistentFSM.State[TagState.State, Data, DomainEvent] = {
@@ -391,10 +372,29 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
     MongoConnector.getTDCollection.flatMap(x => MongoUtils.findOneDictionary(x, query))
   }
 
-  def getComposedSql(frequencyType: FrequencyType, dic: TagDictionary): String = {
+  def getComposedSql(frequencyType: FrequencyType, dic: TagDictionary): TagDictionary = {
     val startDate = getStartDate(frequencyType, dic.started.get)
     val endDate = getEndDate(frequencyType, startDate, dic.traced.get)
-    dic.sql.replaceAll("\\$start_date", startDate).replaceAll("\\$end_date", endDate)
+//    dic.sql.replaceAll("\\$start_date", startDate).replaceAll("\\$end_date", endDate)
+    TagDictionary(
+      dic.tag_id,
+      dic.channel_type,
+      dic.channel_item,
+      dic.tag_type,
+      dic.tag_name,
+      dic.sql.replaceAll("\\$start_date", startDate).replaceAll("\\$end_date", endDate),
+      dic.update_frequency,
+      dic.started,
+      dic.traced,
+      dic.description,
+      dic.create_time,
+      dic.update_time,
+      dic.disable_flag,
+      dic.score_method,
+      dic.attribute,
+      dic.creator,
+      dic.is_focus
+    )
   }
 
   whenUnhandled {
