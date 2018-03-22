@@ -313,8 +313,11 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
         updateAndCheck(dic)
       }else {
         // TODO fix
-        MessageProducer.getProducer.sendToFinishTopic(frequencyType, dic)
-        updateAndCheck(dic)
+//        MessageProducer.getProducer.sendToFinishTopic(frequencyType, dic)
+        dic.update_frequency match {
+          case "M" => goto (Receiving) applying Reset(Monthly)
+          case "D" => goto (Receiving) applying Reset(Daily)
+        }
       }
 
   }

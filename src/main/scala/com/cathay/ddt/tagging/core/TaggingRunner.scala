@@ -20,12 +20,11 @@ class TaggingRunner extends Actor with EnvLoader{
       println(s"I received Work Message and My ActorRef: ${self}")
       val stdout = new StringBuilder
       val stderr = new StringBuilder
-      val execute = Seq("/bin/bash", runPath) !
-
-      //ProcessLogger(stdout append _ + "\n", stderr append _ + "\n")
-      //println(execute, stdout, stderr)
+//      val execute = Seq("/bin/bash", s"$runPath", "-u", TMP_FILE_PATH)
+      val execute = Seq("/bin/bash", runPath) ! ProcessLogger(stdout append _ + "\n", stderr append _ + "\n")
 
       if(execute == 0) {
+        println(execute, stdout, stderr)
         msg.instance.composeTd.update_frequency.toUpperCase() match {
           case "M" =>
             //          context.parent ! FinishInstance(Monthly, msg.instance)
