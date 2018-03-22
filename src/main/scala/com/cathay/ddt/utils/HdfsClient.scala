@@ -25,4 +25,18 @@ object HdfsWriter extends CalendarConverter {
     fs.close()
   }
 
+  def delete(uri: String = URL, filePath: String = TMP_FILE_PATH, fileName: String): Boolean = {
+    var status: Boolean = false
+    System.setProperty("HADOOP_USER_NAME", HADOOP_USER_NAME)
+    val path = new Path(filePath + fileName)
+    val conf = new Configuration()
+    conf.set("fs.defaultFS", uri)
+    val fs = FileSystem.get(conf)
+    if(fs.exists(path)) {
+      status = fs.delete(path, false)
+    }
+    fs.close()
+    status
+  }
+
 }
