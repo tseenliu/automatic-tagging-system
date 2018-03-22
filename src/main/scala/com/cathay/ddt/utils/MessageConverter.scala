@@ -69,6 +69,14 @@ object MessageConverter extends CalendarConverter {
             None,
             input.exec_date)
         }
+      case "Y" =>
+        TagMessage(
+          topic,
+          frequency.toUpperCase(),
+          value,
+          None,
+          None,
+          input.exec_date)
     }
   }
 
