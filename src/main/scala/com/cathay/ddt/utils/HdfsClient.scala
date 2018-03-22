@@ -3,7 +3,7 @@ package com.cathay.ddt.utils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 
-object HdfsWriter extends CalendarConverter {
+class HdfsClient extends CalendarConverter {
 
   val hdfsConfig = getConfig("ats")
   val HADOOP_USER_NAME = hdfsConfig.getString("ats.hdfs.hadoop-user-name")
@@ -15,6 +15,7 @@ object HdfsWriter extends CalendarConverter {
   }
 
   def write(uri: String = URL, filePath: String = TMP_FILE_PATH, fileName: String, data: Array[Byte]) = {
+    var status: Boolean = false
     System.setProperty("HADOOP_USER_NAME", HADOOP_USER_NAME)
     val path = new Path(filePath + fileName)
     val conf = new Configuration()
@@ -22,7 +23,10 @@ object HdfsWriter extends CalendarConverter {
     val fs = FileSystem.get(conf)
     val os = fs.create(path)
     os.write(data)
+    if (fs.exists(path)) status = true
+    else status = false
     fs.close()
+    status
   }
 
   def delete(uri: String = URL, filePath: String = TMP_FILE_PATH, fileName: String): Boolean = {
@@ -39,4 +43,8 @@ object HdfsWriter extends CalendarConverter {
     status
   }
 
+}
+
+object HdfsClient {
+  def getClient: HdfsClient = new HdfsClient
 }

@@ -42,15 +42,6 @@ class TagScheduler extends Actor {
     }
   }
 
-//  val HscPaths = List(
-//    "/user/tag-scheduler/w1",
-//    "/user/tag-scheduler/w2",
-//    "/user/tag-scheduler/w3",
-//    "/user/tag-scheduler/w4",
-//    "/user/tag-scheduler/w5",
-//    "/user/tag-scheduler/w6"
-//  )
-
   def schedulerPoolRun(): Unit = {
     if(routerPool.isEmpty){
       routerPool = Option(context.actorOf(RoundRobinGroup(HscPaths.toList).props(), "RoundRobinGroup"))
@@ -70,7 +61,7 @@ class TagScheduler extends Actor {
 
     case Schedule(instance) =>
       import scala.concurrent.ExecutionContext.Implicits.global
-      println(s"[Info] TagScheduler is received: Tag(${instance.dic.update_frequency}) ID[${instance.dic.actorID}]")
+      println(s"[Info] TagScheduler is received: Tag(${instance.composeTd.update_frequency}) ID[${instance.composeTd.actorID}]")
       instanceList += instance
 
       if(cancellable.isDefined) {
@@ -79,7 +70,7 @@ class TagScheduler extends Actor {
       } else {
         println("[Info] TagScheduler Countdown timer is [Start].")
       }
-      cancellable = Option(context.system.scheduler.scheduleOnce(10 seconds, self, RunInstances))
+      cancellable = Option(context.system.scheduler.scheduleOnce(20 seconds, self, RunInstances))
 
     case RunInstances =>
       schedulerPoolRun()
@@ -97,13 +88,12 @@ class TagScheduler extends Actor {
     case FinishInstance(frequencyType, instance) =>
 //      instanceList -= instance
 //      totalNumIns += 1
-      context.actorSelection(s"/user/tag-manager/${instance.dic.actorID}") ! Report(success = true, frequencyType, instance.dic)
+      context.actorSelection(s"/user/tag-manager/${instance.composeTd.actorID}") ! Report(success = true, frequencyType, instance.composeTd)
       if(instanceList.nonEmpty) {
         self ! RunInstances
       }
 
     case KILL =>
-      println("killing...")
       for( a <- 1 until 7) {
         context.actorSelection(s"/user/tag-scheduler/w$a") ! SLEEP
       }
@@ -111,7 +101,7 @@ class TagScheduler extends Actor {
 }
 
 object TagScheduler {
-  case class ScheduleInstance(composeSql: String, dic: TagDictionary)
+  case class ScheduleInstance(composeTd: TagDictionary)
   case class Schedule(instance: ScheduleInstance)
   case object RunInstances
   case class FinishInstance(frequencyType: FrequencyType, instance: ScheduleInstance)

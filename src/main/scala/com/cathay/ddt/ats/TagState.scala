@@ -12,7 +12,7 @@ import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import com.cathay.ddt.kafka.MessageProducer
 import com.cathay.ddt.tagging.schema.{TagDictionary, TagMessage}
 import com.cathay.ddt.tagging.schema.TagMessage.{Message, SimpleTagMessage}
-import com.cathay.ddt.utils.{CalendarConverter, HdfsWriter}
+import com.cathay.ddt.utils.{CalendarConverter, HdfsClient}
 import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.{Await, Future}
@@ -287,20 +287,20 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
             // if success, produce and update
             val composeTd = getComposedSql(Monthly, dic)
             val tdJson = composeTd.toJson
-            HdfsWriter.write(fileName = s"${composeTd.tag_id}_${getCurrentDate}", data = tdJson.prettyPrint.getBytes)
-            context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(composeTd.sql, dic))
+            HdfsClient.getClient.write(fileName = s"${composeTd.tag_id}_${getCurrentDate}", data = tdJson.prettyPrint.getBytes)
+            context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(composeTd))
             stay()
           case "D" =>
             val composeTd = getComposedSql(Daily, dic)
             val tdJson = composeTd.toJson
-            HdfsWriter.write(fileName = s"${composeTd.tag_id}_${getCurrentDate}", data = tdJson.prettyPrint.getBytes)
-            context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(composeTd.sql, dic))
+            HdfsClient.getClient.write(fileName = s"${composeTd.tag_id}_${getCurrentDate}", data = tdJson.prettyPrint.getBytes)
+            context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(composeTd))
             stay()
         }
       }else {
         // without time composing
-        HdfsWriter.write(fileName = s"${dic.tag_id}_${getCurrentDate}", data = dic.toJson.prettyPrint.getBytes)
-        context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(dic.sql, dic))
+        HdfsClient.getClient.write(fileName = s"${dic.tag_id}_${getCurrentDate}", data = dic.toJson.prettyPrint.getBytes)
+        context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(dic))
         stay()
       }
 
@@ -308,7 +308,7 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
       println(s"[Info] Tag($frequency) ID[${dic.actorID}] is producing finish topic.")
       // if success, produce and update
       if(success) {
-        // remove hdfs json
+        HdfsClient.getClient.delete(fileName = s"${dic.tag_id}_${getCurrentDate}")
         MessageProducer.getProducer.sendToFinishTopic(frequencyType, dic)
         updateAndCheck(dic)
       }else {

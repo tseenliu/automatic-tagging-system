@@ -26,13 +26,13 @@ class TaggingRunner extends Actor with EnvLoader{
       //println(execute, stdout, stderr)
 
       if(execute == 0) {
-        msg.instance.dic.update_frequency.toUpperCase() match {
+        msg.instance.composeTd.update_frequency.toUpperCase() match {
           case "M" =>
             //          context.parent ! FinishInstance(Monthly, msg.instance)
-            context.actorSelection(s"/user/tag-manager/${msg.instance.dic.actorID}") ! Report(success = true, Monthly, msg.instance.dic)
+            context.actorSelection(s"/user/tag-manager/${msg.instance.composeTd.actorID}") ! Report(success = true, Monthly, msg.instance.composeTd)
           case "D" =>
             //          context.parent ! FinishInstance(Daily, msg.instance)
-            context.actorSelection(s"/user/tag-manager/${msg.instance.dic.actorID}") ! Report(success = true, Daily, msg.instance.dic)
+            context.actorSelection(s"/user/tag-manager/${msg.instance.composeTd.actorID}") ! Report(success = true, Daily, msg.instance.composeTd)
         }
       }
 

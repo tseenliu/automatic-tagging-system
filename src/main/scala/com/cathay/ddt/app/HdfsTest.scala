@@ -1,15 +1,10 @@
 package com.cathay.ddt.app
 
 import com.cathay.ddt.tagging.schema.{TagDictionary, TagType}
-import com.cathay.ddt.utils.{HdfsWriter, ViewMapper}
+import com.cathay.ddt.utils.{HdfsClient, ViewMapper}
 import spray.json._
 
 object HdfsTest extends App {
-
-  println(HdfsWriter.URL)
-  println(HdfsWriter.TMP_FILE_PATH)
-
-  println(ViewMapper.getViewMapper.initial())
 
   // tag output
   def randomString(length: Int) = scala.util.Random.alphanumeric.take(length).mkString
@@ -51,5 +46,7 @@ object HdfsTest extends App {
   val json = neilYoung.toJson
   println(json.prettyPrint)
 
-  HdfsWriter.write(fileName = "20180321", data = json.prettyPrint.getBytes)
+  HdfsClient.getClient.write(fileName = "test.json", data = json.prettyPrint.getBytes)
+//  val a = HdfsClient.delete(fileName = "test.json")
+//  println(s"status: $a")
 }

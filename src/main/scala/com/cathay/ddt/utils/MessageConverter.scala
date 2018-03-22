@@ -109,15 +109,20 @@ object MessageConverter extends CalendarConverter {
 //    }
     matches.foreach{ x =>
       val table = x.trim.split("\\.")(1)
-      set += map(table)
+      try {
+        set += map(table)
+      }catch {
+        case keyNotFound: NoSuchElementException => println(s"[ERROR] $keyNotFound")
+        case _: Throwable => println("Got some other kind of exception")
+      }
     }
     set.toIterator
   }
 
   def getSqlMTable: Map[String, Message] = {
     if (sqlMTable.isEmpty) {
-      initialADW()
-//      initialFromLocal()
+//      initialADW()
+      initialFromLocal()
       sqlMTable
     } else {
       sqlMTable
@@ -126,8 +131,8 @@ object MessageConverter extends CalendarConverter {
 
   def getKafkaMTable: Map[String, String] = {
     if (kafkaMTable.isEmpty) {
-      initialADW()
-//      initialFromLocal()
+//      initialADW()
+      initialFromLocal()
       kafkaMTable
     } else {
       kafkaMTable
