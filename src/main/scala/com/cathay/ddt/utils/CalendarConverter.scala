@@ -58,7 +58,7 @@ trait CalendarConverter extends EnvLoader {
       case Monthly =>
         val c = getCalendar
         c.setTime(SMF.parse(getLastMonth))
-        c.set(Calendar.MONTH, started)
+        c.add(Calendar.MONTH, started+1)
         getDateFormat(c)
       case Daily =>
         val c = getCalendar

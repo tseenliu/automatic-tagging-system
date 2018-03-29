@@ -2,19 +2,22 @@ package com.cathay.ddt.ats
 
 import akka.actor.{Actor, ActorRef, Cancellable, Props}
 import akka.routing.{BroadcastGroup, RoundRobinGroup}
-import com.cathay.ddt.ats.TagState.{FrequencyType, Report}
+import com.cathay.ddt.ats.TagState.{FrequencyType, Monthly, Report}
 import com.cathay.ddt.tagging.core.TaggingRunner
 import com.cathay.ddt.tagging.core.TaggingRunner.{Run, SLEEP}
-import com.cathay.ddt.tagging.schema.TagDictionary
-import com.cathay.ddt.utils.YarnMetricsChecker
+import com.cathay.ddt.tagging.schema.{ComposeTD, TagDictionary}
+import com.cathay.ddt.utils.{CalendarConverter, HdfsClient, YarnMetricsChecker}
 
 import scala.concurrent.duration._
 import scala.collection.mutable.ListBuffer
 
+import com.cathay.ddt.tagging.schema.ComposeTDProtocol._
+import spray.json._
+
 /**
   * Created by Tse-En on 2018/1/17.
   */
-class TagScheduler extends Actor {
+class TagScheduler extends Actor with CalendarConverter {
   import TagScheduler._
 
   val ymChecker: YarnMetricsChecker = YarnMetricsChecker.getChecker
@@ -62,6 +65,9 @@ class TagScheduler extends Actor {
     case Schedule(instance) =>
       import scala.concurrent.ExecutionContext.Implicits.global
       println(s"[Info] TagScheduler is received: Tag(${instance.composeTd.update_frequency}) ID[${instance.composeTd.actorID}]")
+
+      val tdJson = instance.composeTd.toJson
+      HdfsClient.getClient.write(fileName = s"${instance.composeTd.tag_id}_${getCurrentDate}", data = tdJson.compactPrint.getBytes)
       instanceList += instance
 
       if(cancellable.isDefined) {
@@ -85,13 +91,19 @@ class TagScheduler extends Actor {
 //        totalNumIns -= instanceList.length
 //      }
 
+    case NonFinishInstance(frequencyType, instance) =>
+      context.actorSelection(s"/user/tag-manager/${instance.composeTd.actorID}") ! Report(success = false, frequencyType, instance.composeTd)
+
     case FinishInstance(frequencyType, instance) =>
 //      instanceList -= instance
 //      totalNumIns += 1
+
+      HdfsClient.getClient.delete(fileName = s"${instance.composeTd.tag_id}_${getCurrentDate}")
       context.actorSelection(s"/user/tag-manager/${instance.composeTd.actorID}") ! Report(success = true, frequencyType, instance.composeTd)
-      if(instanceList.nonEmpty) {
-        self ! RunInstances
-      }
+
+//      if(instanceList.nonEmpty) {
+//        self ! RunInstances
+//      }
 
     case KILL =>
       for( a <- 1 until 7) {
@@ -101,10 +113,11 @@ class TagScheduler extends Actor {
 }
 
 object TagScheduler {
-  case class ScheduleInstance(composeTd: TagDictionary)
+  case class ScheduleInstance(composeTd: ComposeTD)
   case class Schedule(instance: ScheduleInstance)
   case object RunInstances
   case class FinishInstance(frequencyType: FrequencyType, instance: ScheduleInstance)
+  case class NonFinishInstance(frequencyType: FrequencyType, instance: ScheduleInstance)
   case class Create(availableInstance: Int)
   case object KILL
 }

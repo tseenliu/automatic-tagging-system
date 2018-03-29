@@ -10,14 +10,14 @@ import com.cathay.ddt.ats.TagManager.{Cmd, Delete}
 import com.cathay.ddt.ats.TagScheduler.{Schedule, ScheduleInstance}
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import com.cathay.ddt.kafka.MessageProducer
-import com.cathay.ddt.tagging.schema.{TagDictionary, TagMessage}
+import com.cathay.ddt.tagging.schema.{ComposeTD, Dictionary, TagDictionary, TagMessage}
 import com.cathay.ddt.tagging.schema.TagMessage.{Message, SimpleTagMessage}
 import com.cathay.ddt.utils.{CalendarConverter, HdfsClient}
 import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import com.cathay.ddt.tagging.schema.TagDictionaryProtocol._
+import com.cathay.ddt.tagging.schema.ComposeTDProtocol._
 import spray.json._
 
 
@@ -120,7 +120,7 @@ object TagState {
   case class Receipt(tagMessage: TagMessage)
   case object Check
   case object Launch
-  case class Report(success: Boolean, frequencyType: FrequencyType, dic: TagDictionary)
+  case class Report(success: Boolean, frequencyType: FrequencyType, dic: ComposeTD)
   case object Stop
   case object RevivalCheck
   case class Timeout(time: String)
@@ -286,43 +286,45 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
             // sender or run
             // if success, produce and update
             val composeTd = getComposedSql(Monthly, dic)
-            val tdJson = composeTd.toJson
-            HdfsClient.getClient.write(fileName = s"${composeTd.tag_id}_${getCurrentDate}", data = tdJson.prettyPrint.getBytes)
+//            val tdJson = composeTd.toJson
+//            HdfsClient.getClient.write(fileName = s"${composeTd.tag_id}_${getCurrentDate}", data = tdJson.compactPrint.getBytes)
             context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(composeTd))
             stay()
           case "D" =>
             val composeTd = getComposedSql(Daily, dic)
-            val tdJson = composeTd.toJson
-            HdfsClient.getClient.write(fileName = s"${composeTd.tag_id}_${getCurrentDate}", data = tdJson.prettyPrint.getBytes)
+//            val tdJson = composeTd.toJson
+//            HdfsClient.getClient.write(fileName = s"${composeTd.tag_id}_${getCurrentDate}", data = tdJson.compactPrint.getBytes)
             context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(composeTd))
             stay()
         }
       }else {
         // without time composing
-        HdfsClient.getClient.write(fileName = s"${dic.tag_id}_${getCurrentDate}", data = dic.toJson.prettyPrint.getBytes)
-        context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(dic))
+        val composeTd = getComposedSql(Daily, dic)
+//        val tdJson = composeTd.toJson
+//        HdfsClient.getClient.write(fileName = s"${dic.tag_id}_${getCurrentDate}", data = tdJson.compactPrint.getBytes)
+        context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(composeTd))
         stay()
       }
 
-    case Event(Report(success, frequencyType, dic), _) =>
-      println(s"[Info] Tag($frequency) ID[${dic.actorID}] is producing finish topic.")
+    case Event(Report(success, frequencyType, ctd), _) =>
+      println(s"[Info] Tag($frequency) ID[${ctd.actorID}] is producing finish topic.")
       // if success, produce and update
       if(success) {
-        HdfsClient.getClient.delete(fileName = s"${dic.tag_id}_${getCurrentDate}")
-        MessageProducer.getProducer.sendToFinishTopic(frequencyType, dic)
-        updateAndCheck(dic)
+//        HdfsClient.getClient.delete(fileName = s"${ctd.tag_id}_${getCurrentDate}")
+        MessageProducer.getProducer.sendToFinishTopic(frequencyType, ctd)
+        updateAndCheck(ctd)
       }else {
         // TODO fix
 //        MessageProducer.getProducer.sendToFinishTopic(frequencyType, dic)
-        dic.update_frequency match {
+        ctd.update_frequency match {
           case "M" => goto (Receiving) applying Reset(Monthly)
           case "D" => goto (Receiving) applying Reset(Daily)
         }
       }
 
   }
-  def updateAndCheck(dic: TagDictionary): PersistentFSM.State[TagState.State, Data, DomainEvent] = {
-    dic.update_frequency match {
+  def updateAndCheck(ctd: Dictionary): PersistentFSM.State[TagState.State, Data, DomainEvent] = {
+    ctd.asInstanceOf[ComposeTD].update_frequency match {
       case "M" =>
           goto(Verifying) applying UpdatedMessages(Monthly) andThen { _ =>
             self ! Check
@@ -375,29 +377,47 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
     MongoConnector.getTDCollection.flatMap(x => MongoUtils.findOneDictionary(x, query))
   }
 
-  def getComposedSql(frequencyType: FrequencyType, dic: TagDictionary): TagDictionary = {
+  def getComposedSql(frequencyType: FrequencyType, dic: TagDictionary): ComposeTD = {
     val startDate = getStartDate(frequencyType, dic.started.get)
     val endDate = getEndDate(frequencyType, startDate, dic.traced.get)
-//    dic.sql.replaceAll("\\$start_date", startDate).replaceAll("\\$end_date", endDate)
-    TagDictionary(
-      dic.tag_id,
-      dic.channel_type,
-      dic.channel_item,
-      dic.tag_type,
-      dic.tag_name,
-      dic.sql.replaceAll("\\$start_date", startDate).replaceAll("\\$end_date", endDate),
-      dic.update_frequency,
-      dic.started,
-      dic.traced,
-      dic.description,
-      dic.create_time,
-      dic.update_time,
-      dic.disable_flag,
-      dic.score_method,
-      dic.attribute,
-      dic.creator,
-      dic.is_focus
-    )
+    if (dic.sql.contains("$")) {
+      ComposeTD(
+        dic.tag_id,
+        dic.source_type,
+        dic.source_item,
+        dic.tag_type,
+        dic.tag_name,
+        dic.sql.replaceAll("\\$start_date", startDate).replaceAll("\\$end_date", endDate),
+        dic.update_frequency,
+        dic.started,
+        dic.traced,
+        dic.score_method,
+        dic.attribute,
+        Some(startDate),
+        Some(endDate),
+        getCurrentDate,
+        dic.system_name
+      )
+    }else {
+      ComposeTD(
+        dic.tag_id,
+        dic.source_type,
+        dic.source_item,
+        dic.tag_type,
+        dic.tag_name,
+        dic.sql,
+        dic.update_frequency,
+        dic.started,
+        dic.traced,
+        dic.score_method,
+        dic.attribute,
+        None,
+        None,
+        getCurrentDate,
+        dic.system_name
+      )
+    }
+
   }
 
   whenUnhandled {

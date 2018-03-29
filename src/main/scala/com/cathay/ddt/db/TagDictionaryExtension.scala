@@ -27,8 +27,8 @@ class TagDictionaryExtension {
   implicit object ArtistWriter extends BSONDocumentWriter[TagDictionary] {
     def write(td: TagDictionary): BSONDocument = BSONDocument(
       "tag_id" -> td.tag_id,
-      "channel_type" -> td.channel_type,
-      "channel_item" -> td.channel_item,
+      "source_type" -> td.source_type,
+      "source_item" -> td.source_item,
       "tag_type" -> td.tag_type,
       "tag_name" -> td.tag_name,
       "sql" -> td.sql,
@@ -42,14 +42,15 @@ class TagDictionaryExtension {
       "score_method" -> td.score_method,
       "attribute" -> td.attribute,
       "creator" -> td.creator,
-      "is_focus" -> td.is_focus)
+      "is_focus" -> td.is_focus,
+      "system_name" -> td.system_name)
   }
 
   implicit object ArtistReader extends BSONDocumentReader[TagDictionary] {
     def read(doc: BSONDocument): TagDictionary = TagDictionary(
       doc.getAs[String]("tag_id").get,
-      doc.getAs[String]("channel_type").get,
-      doc.getAs[String]("channel_item").get,
+      doc.getAs[String]("source_type").get,
+      doc.getAs[String]("source_item").get,
       doc.getAs[List[TagType]]("tag_type").toList.flatten,
       doc.getAs[String]("tag_name").get,
       doc.getAs[String]("sql").get,
@@ -63,7 +64,8 @@ class TagDictionaryExtension {
       doc.getAs[String]("score_method").get,
       doc.getAs[String]("attribute").get,
       doc.getAs[String]("creator").get,
-      doc.getAs[Boolean]("is_focus").get)
+      doc.getAs[Boolean]("is_focus").get,
+      doc.getAs[String]("system_name").get)
   }
 
 }

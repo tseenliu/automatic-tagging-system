@@ -46,5 +46,6 @@ class HdfsClient extends CalendarConverter {
 }
 
 object HdfsClient {
-  def getClient: HdfsClient = new HdfsClient
+  private final val HDFSCLIENT = new HdfsClient
+  def getClient: HdfsClient = HDFSCLIENT
 }
