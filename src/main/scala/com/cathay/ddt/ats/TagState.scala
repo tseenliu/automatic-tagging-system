@@ -166,7 +166,7 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
           m.update_frequency match {
             case "M" => monthly += (m.value -> currentData.monthly.getOrElse(m.value, false))
             case "D" => daily += (m.value -> currentData.daily.getOrElse(m.value, false))
-            case "Y" =>
+            case "Y" => None
           }
         }
         Metadata(daily.toMap, monthly.toMap)
@@ -223,8 +223,6 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
         if (stateData.isNull) sender() ! false
         else sender() ! true
         saveStateSnapshot()
-//        println(s"[Info] Tag($frequency, ID($id):")
-//        println(stateData)
       }
   }
 
