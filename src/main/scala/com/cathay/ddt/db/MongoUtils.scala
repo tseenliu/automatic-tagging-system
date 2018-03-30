@@ -13,10 +13,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 /**
   * Created by Tse-En on 2017/12/12.
   */
-object MongoUtils {
-  implicit val reader = Macros.reader[TagDictionary]
-  implicit val writer = Macros.writer[TagDictionary]
-
+object MongoUtils extends TagDictionaryExtension {
 
   /* Write Documents */
   def insertDoc(coll: BSONCollection, doc: BSONDocument): Future[Boolean] = {
@@ -56,12 +53,12 @@ object MongoUtils {
 
   /* Find Documents */
   def findDictionaries(collection: BSONCollection, query: BSONDocument)(implicit ec: ExecutionContext): Future[List[TagDictionary]] = {
-    implicit val reader = Macros.reader[TagDictionary]
+//    implicit val reader = Macros.reader[TagDictionary]
     collection.find(query).cursor[TagDictionary]().collect[List]()
   }
 
   def findOneDictionary(collection: BSONCollection, query: BSONDocument)(implicit ec: ExecutionContext): Future[TagDictionary] = {
-    implicit val reader = Macros.reader[TagDictionary]
+//    implicit val reader = Macros.reader[TagDictionary]
     collection.find(query).requireOne[TagDictionary]
   }
 

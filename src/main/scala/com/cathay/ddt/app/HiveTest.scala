@@ -1,20 +1,30 @@
 package com.cathay.ddt.app
 
-import java.sql.DriverManager
+import java.sql.{Connection, DriverManager}
+
+import com.cathay.ddt.utils.ViewMapper.{HIVE_USER, HIVE_USER_PASS, URL, VIEW_TABLE}
 
 object HiveTest extends App {
 
   val driverName = "org.apache.hive.jdbc.HiveDriver"
   Class.forName(driverName)
 
-  val con = DriverManager.getConnection("jdbc:hive2://parhhdpm2:10000/btmp", "pdt30802", "cathay")
+  val con: Connection = DriverManager.getConnection(s"jdbc:hive2://$URL", HIVE_USER, HIVE_USER_PASS)
+//  val con = DriverManager.getConnection("jdbc:hive2://parhhdpm2:10000", "pdt30802", "cathay")
   val stmt = con.createStatement()
-  val sql3 = s"""
-                |select
-                |view_id, db_id, table_id, year_ind, month_ind, day_ind, ref_ind
-                |from etl_adw_table
+  val ParsingSQLCommand: String = {
+    s"""
+       |select
+       |view_id, db_id, table_id, year_ind, month_ind, day_ind, ref_ind
+       |from $VIEW_TABLE
     """.stripMargin
-  val res = stmt.executeQuery(sql3)
+  }
+//  val ParsingSQLCommand = s"""
+//                |select
+//                |view_id, db_id, table_id, year_ind, month_ind, day_ind, ref_ind
+//                |from btmp.etl_adw_table
+//    """.stripMargin
+  val res = stmt.executeQuery(ParsingSQLCommand)
   while (res.next()) {
     println(res.getString(1)
       + "\t" + res.getString(2)
@@ -23,14 +33,5 @@ object HiveTest extends App {
       + "\t" + res.getString(5)
       + "\t" + res.getString(6)
       + "\t" + res.getString(7))
-
-    val view = res.getString(1).split("\\.")(1)
-    val db = res.getString(2)
-    val table =  res.getString(3)
-    val year = res.getString(4)
-    val month = res.getString(5)
-    val day = res.getString(6)
-    val ref = res.getString(7)
-
   }
 }

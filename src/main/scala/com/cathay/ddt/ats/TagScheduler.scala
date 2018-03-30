@@ -2,19 +2,22 @@ package com.cathay.ddt.ats
 
 import akka.actor.{Actor, ActorRef, Cancellable, Props}
 import akka.routing.{BroadcastGroup, RoundRobinGroup}
-import com.cathay.ddt.ats.TagState.{FrequencyType, Report}
+import com.cathay.ddt.ats.TagState.{FrequencyType, Monthly, Report}
 import com.cathay.ddt.tagging.core.TaggingRunner
 import com.cathay.ddt.tagging.core.TaggingRunner.{Run, SLEEP}
-import com.cathay.ddt.tagging.schema.TagDictionary
-import com.cathay.ddt.utils.YarnMetricsChecker
+import com.cathay.ddt.tagging.schema.{ComposeTD, TagDictionary}
+import com.cathay.ddt.utils.{CalendarConverter, HdfsClient, YarnMetricsChecker}
 
 import scala.concurrent.duration._
 import scala.collection.mutable.ListBuffer
 
+import com.cathay.ddt.tagging.schema.ComposeTDProtocol._
+import spray.json._
+
 /**
   * Created by Tse-En on 2018/1/17.
   */
-class TagScheduler extends Actor {
+class TagScheduler extends Actor with CalendarConverter {
   import TagScheduler._
 
   val ymChecker: YarnMetricsChecker = YarnMetricsChecker.getChecker
@@ -42,15 +45,6 @@ class TagScheduler extends Actor {
     }
   }
 
-//  val HscPaths = List(
-//    "/user/tag-scheduler/w1",
-//    "/user/tag-scheduler/w2",
-//    "/user/tag-scheduler/w3",
-//    "/user/tag-scheduler/w4",
-//    "/user/tag-scheduler/w5",
-//    "/user/tag-scheduler/w6"
-//  )
-
   def schedulerPoolRun(): Unit = {
     if(routerPool.isEmpty){
       routerPool = Option(context.actorOf(RoundRobinGroup(HscPaths.toList).props(), "RoundRobinGroup"))
@@ -70,7 +64,10 @@ class TagScheduler extends Actor {
 
     case Schedule(instance) =>
       import scala.concurrent.ExecutionContext.Implicits.global
-      println(s"[Info] TagScheduler is received: Tag(${instance.dic.update_frequency}) ID[${instance.dic.actorID}]")
+      println(s"[Info] TagScheduler is received: Tag(${instance.composeTd.update_frequency}) ID[${instance.composeTd.actorID}]")
+
+      val tdJson = instance.composeTd.toJson
+      HdfsClient.getClient.write(fileName = s"${instance.composeTd.tag_id}_${getCurrentDate}", data = tdJson.compactPrint.getBytes)
       instanceList += instance
 
       if(cancellable.isDefined) {
@@ -79,7 +76,7 @@ class TagScheduler extends Actor {
       } else {
         println("[Info] TagScheduler Countdown timer is [Start].")
       }
-      cancellable = Option(context.system.scheduler.scheduleOnce(10 seconds, self, RunInstances))
+      cancellable = Option(context.system.scheduler.scheduleOnce(20 seconds, self, RunInstances))
 
     case RunInstances =>
       schedulerPoolRun()
@@ -94,16 +91,21 @@ class TagScheduler extends Actor {
 //        totalNumIns -= instanceList.length
 //      }
 
+    case NonFinishInstance(frequencyType, instance) =>
+      context.actorSelection(s"/user/tag-manager/${instance.composeTd.actorID}") ! Report(success = false, frequencyType, instance.composeTd)
+
     case FinishInstance(frequencyType, instance) =>
 //      instanceList -= instance
 //      totalNumIns += 1
-      context.actorSelection(s"/user/tag-manager/${instance.dic.actorID}") ! Report(frequencyType, instance.dic)
-      if(instanceList.nonEmpty) {
-        self ! RunInstances
-      }
+
+      HdfsClient.getClient.delete(fileName = s"${instance.composeTd.tag_id}_${getCurrentDate}")
+      context.actorSelection(s"/user/tag-manager/${instance.composeTd.actorID}") ! Report(success = true, frequencyType, instance.composeTd)
+
+//      if(instanceList.nonEmpty) {
+//        self ! RunInstances
+//      }
 
     case KILL =>
-      println("killing...")
       for( a <- 1 until 7) {
         context.actorSelection(s"/user/tag-scheduler/w$a") ! SLEEP
       }
@@ -111,10 +113,11 @@ class TagScheduler extends Actor {
 }
 
 object TagScheduler {
-  case class ScheduleInstance(composeSql: String, dic: TagDictionary)
+  case class ScheduleInstance(composeTd: ComposeTD)
   case class Schedule(instance: ScheduleInstance)
   case object RunInstances
   case class FinishInstance(frequencyType: FrequencyType, instance: ScheduleInstance)
+  case class NonFinishInstance(frequencyType: FrequencyType, instance: ScheduleInstance)
   case class Create(availableInstance: Int)
   case object KILL
 }

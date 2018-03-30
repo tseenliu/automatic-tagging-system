@@ -11,14 +11,13 @@ import scala.io.Source
 /**
   * Created by Tse-En on 2017/12/20.
   */
-object MessageConverter extends CalendarConverter with EnvLoader {
+object MessageConverter extends CalendarConverter {
 
-  //test
-  val mappingFilePath = getConfig("hive").getString("hive.mapping-path")
+  // local load
+  val mappingFilePath = getConfig("ats").getString("ats.hive.local-path")
+
   var sqlMList = new ListBuffer[(String, Message)]()
   var kafkaMList = new ListBuffer[(String, String)]()
-
-
   var sqlMTable: Map[String, Message] = Map()
   var kafkaMTable: Map[String, String] = Map()
 
@@ -32,22 +31,6 @@ object MessageConverter extends CalendarConverter with EnvLoader {
 
       case _ => getLastDayOfMonth(partitionValue)
     }
-//    partitionValue == currentMon match {
-//      case true =>
-//        // Return currentDay - 2 day
-//        getDailyDate
-//      case false =>
-//        if(partitionValue == getLastMonth) {
-//          if(getCurrentDate == getDayOfMonth(1)) {
-//            getDailyDate
-//          } else getLastDayOfMonth(partitionValue)
-//        }else {
-//          getLastDayOfMonth(partitionValue)
-//        }
-//
-//      //        getLastDayOfMonth(partitionValue)
-//
-//    }
   }
 
   // Convert to tagMessages using a mapping table
@@ -134,7 +117,12 @@ object MessageConverter extends CalendarConverter with EnvLoader {
 //    }
     matches.foreach{ x =>
       val table = x.trim.split("\\.")(1)
-      set += map(table)
+      try {
+        set += map(table)
+      }catch {
+        case keyNotFound: NoSuchElementException => println(s"[ERROR] $keyNotFound")
+        case _: Throwable => println("Got some other kind of exception")
+      }
     }
     set.toIterator
   }

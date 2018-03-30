@@ -11,13 +11,13 @@ import com.typesafe.config.Config
   */
 trait CalendarConverter extends EnvLoader {
 
-  val config: Config = getConfig("hive")
+  val config: Config = getConfig("ats")
   val SMF = new SimpleDateFormat("yyyyMM")
   val SDF = new SimpleDateFormat("yyyy-MM-dd")
 
-  val numsOfDelayDate: Int = config.getString("hive.scheduler.daily").toInt
-  val numsOfDelayMonth: Int = config.getString("hive.scheduler.monthly").toInt
-  val etlTime: String = config.getString("hive.scheduler.time")
+  val numsOfDelayDate: Int = config.getInt("ats.hive.scheduler.daily")
+  val numsOfDelayMonth: Int = config.getInt("ats.hive.scheduler.monthly")
+  val etlTime: String = config.getString("ats.hive.scheduler.time")
 
   def getCalendar: Calendar = Calendar.getInstance()
   def getDateFormat(c: Calendar): String = SDF.format(c.getTime)
@@ -58,7 +58,7 @@ trait CalendarConverter extends EnvLoader {
       case Monthly =>
         val c = getCalendar
         c.setTime(SMF.parse(getLastMonth))
-        c.set(Calendar.MONTH, started)
+        c.add(Calendar.MONTH, started+1)
         getDateFormat(c)
       case Daily =>
         val c = getCalendar

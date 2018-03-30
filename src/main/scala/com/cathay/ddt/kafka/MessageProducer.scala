@@ -1,8 +1,8 @@
 package com.cathay.ddt.kafka
 
 import cakesolutions.kafka.{KafkaProducer, KafkaProducerRecord}
-import com.cathay.ddt.tagging.schema.TagDictionary
-import com.cathay.ddt.utils.{CalendarConverter, EnvLoader}
+import com.cathay.ddt.tagging.schema.ComposeTD
+import com.cathay.ddt.utils.CalendarConverter
 import com.typesafe.config.Config
 import org.apache.kafka.common.serialization.StringSerializer
 import spray.json._
@@ -12,7 +12,7 @@ import org.apache.kafka.clients.producer.RecordMetadata
 
 import scala.concurrent.Future
 
-class MessageProducer extends CalendarConverter with EnvLoader {
+class MessageProducer extends CalendarConverter {
   private val kafkaConfig: Config = getConfig("kafka")
 
   private val producerConfig = kafkaConfig.getConfig("kafka.producer")
@@ -26,14 +26,14 @@ class MessageProducer extends CalendarConverter with EnvLoader {
     ).withConf(producerConfig)
   )
 
-  def sendToFinishTopic(frequency: FrequencyType, dic: TagDictionary): Future[RecordMetadata] = {
+  def sendToFinishTopic(frequency: FrequencyType, ctd: ComposeTD): Future[RecordMetadata] = {
     frequency match {
       case Daily =>
-        val fMessage = TagFinishMessage(tagName, dic.tag_name, dic.update_frequency, None, Option(getDailyDate), dic.actorID, getCalendar.getTimeInMillis, is_success = true)
+        val fMessage = TagFinishMessage(tagName, ctd.tag_name, ctd.update_frequency, None, Option(getDailyDate), ctd.actorID, getCalendar.getTimeInMillis, is_success = true)
         val record = KafkaProducerRecord(publishTopic, Some("tagKey"), s"${fMessage.toJson.prettyPrint}")
         producer.send(record)
       case Monthly =>
-        val fMessage = TagFinishMessage(tagName, dic.tag_name, dic.update_frequency, Option(getLastMonth), None, dic.actorID, getCalendar.getTimeInMillis, is_success = true)
+        val fMessage = TagFinishMessage(tagName, ctd.tag_name, ctd.update_frequency, Option(getLastMonth), None, ctd.actorID, getCalendar.getTimeInMillis, is_success = true)
         val record = KafkaProducerRecord(publishTopic, Some("tagKey"), s"${fMessage.toJson.prettyPrint}")
         producer.send(record)
     }
