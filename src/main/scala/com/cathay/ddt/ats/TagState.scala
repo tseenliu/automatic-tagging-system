@@ -283,25 +283,17 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
       if(dic.started.isDefined && dic.traced.isDefined) {
         frequency match {
           case "M" =>
-            // sender or run
-            // if success, produce and update
             val composeTd = getComposedSql(Monthly, dic)
-//            val tdJson = composeTd.toJson
-//            HdfsClient.getClient.write(fileName = s"${composeTd.tag_id}_${getCurrentDate}", data = tdJson.compactPrint.getBytes)
             context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(composeTd))
             stay()
           case "D" =>
             val composeTd = getComposedSql(Daily, dic)
-//            val tdJson = composeTd.toJson
-//            HdfsClient.getClient.write(fileName = s"${composeTd.tag_id}_${getCurrentDate}", data = tdJson.compactPrint.getBytes)
             context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(composeTd))
             stay()
         }
       }else {
-        // without time composing
+        // without sql composing
         val composeTd = getComposedSql(Daily, dic)
-//        val tdJson = composeTd.toJson
-//        HdfsClient.getClient.write(fileName = s"${dic.tag_id}_${getCurrentDate}", data = tdJson.compactPrint.getBytes)
         context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(composeTd))
         stay()
       }
@@ -310,12 +302,9 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
       println(s"[Info] Tag($frequency) ID[${ctd.actorID}] is producing finish topic.")
       // if success, produce and update
       if(success) {
-//        HdfsClient.getClient.delete(fileName = s"${ctd.tag_id}_${getCurrentDate}")
         MessageProducer.getProducer.sendToFinishTopic(frequencyType, ctd)
         updateAndCheck(ctd)
       }else {
-        // TODO fix
-//        MessageProducer.getProducer.sendToFinishTopic(frequencyType, dic)
         ctd.update_frequency match {
           case "M" => goto (Receiving) applying Reset(Monthly)
           case "D" => goto (Receiving) applying Reset(Daily)
