@@ -26,7 +26,7 @@ class TaggingRunner extends Actor with CalendarConverter{
     case msg: Run =>
       println(s"I received Run Message by TagScheduler and My ActorRef: ${self}")
 
-      val command = Seq("/bin/bash", s"$runPath", "-p", s"$TMP_FILE_PATH + ${msg.instance.composeTd.tag_id}_${getCurrentDate}")
+      val command = Seq("/bin/bash", s"$runPath", "-p", s"$TMP_FILE_PATH${msg.instance.composeTd.tag_id}_${getCurrentDate}")
       println(s"script command: $command")
       val execute = command !
 //        ProcessLogger(stdout append _ + "\n", stderr append _ + "\n")

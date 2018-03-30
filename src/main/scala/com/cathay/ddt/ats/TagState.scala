@@ -72,7 +72,7 @@ object TagState {
       if(monthly.nonEmpty) {
         val isFalse: Boolean = monthly.values.toSet.head
         if(monthly.values.toSet.size == 1 && !isFalse) true
-        else true
+        else false
       } else true
     }
 
