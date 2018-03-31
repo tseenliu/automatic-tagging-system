@@ -8,14 +8,13 @@ class TagDictionaryExtension {
 //  implicit val reader = Macros.reader[TagDictionary]
 //  implicit val writer = Macros.writer[TagDictionary]
 
-
-  implicit object SimpleAlbumWriter extends BSONDocumentWriter[TagType] {
+  implicit object TagTypeWriter extends BSONDocumentWriter[TagType] {
     def write(album: TagType): BSONDocument = BSONDocument(
       "type_L1" -> album.type_L1,
       "type_L2" -> album.type_L2)
   }
 
-  implicit object SimpleAlbumReader extends BSONDocumentReader[TagType] {
+  implicit object TagTypeReader extends BSONDocumentReader[TagType] {
     def read(doc: BSONDocument): TagType = {
       TagType(
         doc.getAs[String]("type_L1").get,
@@ -24,7 +23,7 @@ class TagDictionaryExtension {
   }
 
 
-  implicit object ArtistWriter extends BSONDocumentWriter[TagDictionary] {
+  implicit object TDWriter extends BSONDocumentWriter[TagDictionary] {
     def write(td: TagDictionary): BSONDocument = BSONDocument(
       "tag_id" -> td.tag_id,
       "source_type" -> td.source_type,
@@ -46,7 +45,7 @@ class TagDictionaryExtension {
       "system_name" -> td.system_name)
   }
 
-  implicit object ArtistReader extends BSONDocumentReader[TagDictionary] {
+  implicit object TDReader extends BSONDocumentReader[TagDictionary] {
     def read(doc: BSONDocument): TagDictionary = TagDictionary(
       doc.getAs[String]("tag_id").get,
       doc.getAs[String]("source_type").get,
