@@ -28,7 +28,10 @@ trait ApiRoute {
     case _: reactivemongo.api.Cursor.NoSuchResultException.type =>
       extractUri { uri =>
         println(s"Request to $uri could not be handled normally")
-        complete(HttpResponse(InternalServerError, entity = "Bad numbers, bad result!!!"))
+//        complete(HttpResponse(InternalServerError, entity = "Bad numbers, bad result!!!"))
+        complete(StatusCodes.BadRequest, JsObject(
+          "message" -> JsString(s"tagID is not exist.")
+        ))
       }
   }
 
@@ -46,7 +49,6 @@ trait ApiRoute {
           case true =>
             complete(StatusCodes.OK, JsObject(
               "message" -> JsString(s"tagID[${td.tag_id}] insert successfully.")
-              //              "message" -> JsString("Command deliver successfully.")
             ))
           case false =>
             complete(StatusCodes.BadRequest, JsObject(
@@ -57,29 +59,34 @@ trait ApiRoute {
         path("search") {
           import com.cathay.ddt.tagging.protocal.DynamicTDProtocol._
 
-          (post & entity(as[DynamicTD])) { td =>
+          (post & entity(as[DynamicTD])) { dtd =>
             var bArr = ArrayBuffer[BSONDocument]()
+//            var query = BSONDocument()
+//            if(dtd.source_type.isDefined) {
+//              query ++= BSONDocument("source_type" -> dtd.source_type.get)
+//            }else if(dtd.source_item.isDefined) {
+//              query ++= BSONDocument("source_item" -> dtd.source_item.get)
+//            }
 
-            if (td.tag_type.isDefined) {
-              val typeList = td.tag_type.get
-              for (i <- td.tag_type.get.indices) {
-                bArr += BSONDocument("type_L1" -> typeList(i).type_L1, "type_L2" -> typeList(i).type_L2)
-              }
-            }
-
-            val query = BSONDocument(
-              "source_type" -> td.source_type.get,
-              "source_item" -> td.source_item.get,
-              "tag_type" -> BSONArray(bArr),
-              "tag_name" -> td.tag_name.get,
-              "update_frequency" -> td.update_frequency.get,
-              "started" -> td.started.get,
-              "traced" -> td.traced.get,
-              "score_method" -> td.score_method.get,
-              "attribute" -> td.attribute.get,
-              "system_name" -> td.system_name.get)
+//            if (td.tag_type.isDefined) {
+//              val typeList = td.tag_type.get
+//              for (i <- td.tag_type.get.indices) {
+//                bArr += BSONDocument("type_L1" -> typeList(i).type_L1, "type_L2" -> typeList(i).type_L2)
+//              }
+//            }
+//            query = BSONDocument(
+//              "source_type" -> td.source_type.get,
+//              "source_item" -> td.source_item.get,
+//              "tag_type" -> BSONArray(bArr),
+//              "tag_name" -> td.tag_name.get,
+//              "update_frequency" -> td.update_frequency.get,
+//              "started" -> td.started.get,
+//              "traced" -> td.traced.get,
+//              "score_method" -> td.score_method.get,
+//              "attribute" -> td.attribute.get,
+//              "system_name" -> td.system_name.get)
             complete {
-              OK -> MongoConnector.getTDCollection.flatMap(coll => MongoUtils.findDictionaries(coll, query))
+              OK -> MongoConnector.getTDCollection.flatMap(coll => MongoUtils.findDictionaries(coll, dtd))
             }
           }
         } ~

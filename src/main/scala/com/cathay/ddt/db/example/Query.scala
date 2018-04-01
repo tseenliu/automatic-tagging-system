@@ -54,10 +54,15 @@ object Query extends App {
 //  "system_name": "ATS"
 
 //  val query4 = BSONDocument("tag_name" -> "超市購物", "$and" -> BSONArray(BSONDocument("type_L1" -> "D", "type_L2" -> "d"), BSONDocument("type_L1" -> "D", "type_L2" -> "d")))
-val query4 = BSONDocument("tag_name" -> "超市購物", "tag_type" -> BSONArray())
 
+//  val query4 = BSONDocument("tag_name" -> "超市購物", "tag_type" -> BSONArray())
 
-  FBsonCollection.flatMap(x => MongoUtils.findOneDictionary(x, query)).map { docList =>
+  var query0 = BSONDocument()
+  query0 ++= BSONDocument("tag_name" -> "超市購物")
+  query0 ++= BSONDocument("update_frequency" -> "M")
+
+  println(query0)
+  FBsonCollection.flatMap(x => MongoUtils.findOneDictionary(x, query0)).map { docList =>
     println(docList)
   }
 

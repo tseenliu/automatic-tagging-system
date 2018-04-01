@@ -1,6 +1,6 @@
 package com.cathay.ddt.db
 
-import com.cathay.ddt.tagging.schema.TagDictionary
+import com.cathay.ddt.tagging.schema.{DynamicTD, TagDictionary}
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.{BSONDocument, Macros}
@@ -54,6 +54,12 @@ object MongoUtils extends TagDictionaryExtension {
   /* Find Documents */
   def findDictionaries(collection: BSONCollection, query: BSONDocument)(implicit ec: ExecutionContext): Future[List[TagDictionary]] = {
 //    implicit val reader = Macros.reader[TagDictionary]
+    collection.find(query).cursor[TagDictionary]().collect[List]()
+  }
+
+  def findDictionaries(collection: BSONCollection, query: DynamicTD)(implicit ec: ExecutionContext): Future[List[TagDictionary]] = {
+    //    implicit val reader = Macros.reader[TagDictionary]
+    implicit val dynamicTDHandler = Macros.handler[DynamicTD]
     collection.find(query).cursor[TagDictionary]().collect[List]()
   }
 
