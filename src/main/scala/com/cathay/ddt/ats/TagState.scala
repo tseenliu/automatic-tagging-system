@@ -17,7 +17,7 @@ import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import com.cathay.ddt.tagging.schema.ComposeTDProtocol._
+import com.cathay.ddt.tagging.protocal.ComposeTDProtocal._
 import spray.json._
 
 

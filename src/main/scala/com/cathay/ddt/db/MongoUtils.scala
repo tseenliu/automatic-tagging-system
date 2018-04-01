@@ -62,4 +62,13 @@ object MongoUtils extends TagDictionaryExtension {
     collection.find(query).requireOne[TagDictionary]
   }
 
+  def updateFind(collection: BSONCollection, selector: BSONDocument, modifier: TagDictionary): Future[Option[TagDictionary]] = {
+    import collection.BatchCommands.FindAndModifyCommand.FindAndModifyResult
+
+    val result: Future[FindAndModifyResult] = collection.findAndUpdate(
+      selector, modifier, fetchNewObject = true, upsert = true)
+
+    result.map(x => x.result[TagDictionary])
+  }
+
 }

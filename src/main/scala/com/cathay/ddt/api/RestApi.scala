@@ -6,7 +6,7 @@ import akka.http.scaladsl.Http
 
 object RestApi extends App with ApiRoute {
 
-  override implicit val system = ActorSystem("rest-api")
+  override implicit val system = ActorSystem("mongo-rest-api")
 
   override implicit val materializer = ActorMaterializer()
 

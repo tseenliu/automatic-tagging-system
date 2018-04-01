@@ -1,6 +1,7 @@
 package com.cathay.ddt.app
 
-import com.cathay.ddt.tagging.schema.{ComposeTD, TagDictionary, TagType}
+import com.cathay.ddt.tagging.protocal.DynamicTDProtocol
+import com.cathay.ddt.tagging.schema.{ComposeTD, DynamicTD, TagDictionary, TagType}
 import com.cathay.ddt.utils.{HdfsClient, ViewMapper}
 import spray.json._
 
@@ -62,8 +63,8 @@ object HdfsTest extends App {
             |AND concat(substr('''$end_date''',1,4),substr('''$end_date''',6,2))
           """.stripMargin.trim,
     update_frequency = "M",
-    started = Some(-6),
-    traced = Some(6),
+    started = None,
+    traced = None,
     score_method = "Z",
     attribute = "behavior",
     start_date = Some("2018-01-01"),
@@ -72,12 +73,39 @@ object HdfsTest extends App {
     system_name = "ATS")
 
 
-  import com.cathay.ddt.tagging.schema.ComposeTDProtocol._
+//  import com.cathay.ddt.tagging.protocal.ComposeTDProtocal._
+//  import com.cathay.ddt.tagging.protocal.TDProtocol._
+//
+//  val json = neilYoung.toJson
+//  println(json.prettyPrint)
+//
+//  val json2 = neilYoung1.toJson
+//  println(json2.prettyPrint)
 
-  val json = neilYoung.toJson
-  println(json.compactPrint)
-
-  HdfsClient.getClient.write(fileName = "test.json", data = json.compactPrint.getBytes)
+//  HdfsClient.getClient.write(fileName = "test.json", data = json.compactPrint.getBytes)
 //  val a = HdfsClient.delete(fileName = "test.json")
 //  println(s"status: $a")
+
+
+  val dynamicTD = DynamicTD(
+    source_type = Some("bank"),
+    source_item = Some("信用卡/簽帳卡"),
+    tag_type = Some(List(TagType("D","d"), TagType("E","e"))),
+    tag_name = Some("超市購物"),
+    update_frequency = Some("M"),
+    started = None,
+    traced = None,
+    score_method = Some("Z"),
+    attribute = Some("behavior"),
+    system_name = Some("ATS")
+  )
+
+  import com.cathay.ddt.tagging.protocal.DynamicTDProtocol._
+  val json = dynamicTD.toJson
+  println(json.prettyPrint)
+
+
+  val aaa = """{update_frequency: M, source_type: bank}""".toJson
+  val taaa = aaa.asInstanceOf[DynamicTD]
+  println(taaa.toJson.prettyPrint)
 }
