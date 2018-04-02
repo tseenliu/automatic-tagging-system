@@ -166,7 +166,7 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
           m.update_frequency match {
             case "M" => monthly += (m.value -> currentData.monthly.getOrElse(m.value, false))
             case "D" => daily += (m.value -> currentData.daily.getOrElse(m.value, false))
-            case "Y" => None
+            case _ => None
           }
         }
         Metadata(daily.toMap, monthly.toMap)
@@ -249,6 +249,9 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
             self ! Check
             println(s"[Info] Tag($frequency, ID($id):\n$stateData")
           }
+        case _ =>
+          println(s"[WARN] Tag($frequency, ID($id): ${tm.update_frequency} Match ERROR.")
+          stay()
       }
 
     case Event(Check, _) =>
@@ -290,10 +293,20 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
             stay()
         }
       }else {
-        // without sql composing
-        val composeTd = getComposedSql(Daily, dic)
-        context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(composeTd))
-        stay()
+        // without started and traced value
+//        val composeTd = getComposedSql(Daily, dic)
+//        context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(composeTd))
+//        stay()
+        frequency match {
+          case "M" =>
+            val composeTd = getComposedSql(Monthly, dic)
+            context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(composeTd))
+            stay()
+          case "D" =>
+            val composeTd = getComposedSql(Daily, dic)
+            context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(composeTd))
+            stay()
+        }
       }
 
     case Event(Report(success, frequencyType, ctd), _) =>
@@ -365,9 +378,9 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
   }
 
   def getComposedSql(frequencyType: FrequencyType, dic: TagDictionary): ComposeTD = {
-    val startDate = getStartDate(frequencyType, dic.started.get)
-    val endDate = getEndDate(frequencyType, startDate, dic.traced.get)
     if (dic.sql.contains("$")) {
+      val startDate = getStartDate(frequencyType, dic.started.get)
+      val endDate = getEndDate(frequencyType, startDate, dic.traced.get)
       ComposeTD(
         dic.tag_id,
         dic.source_type,

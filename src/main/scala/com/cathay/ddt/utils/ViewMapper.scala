@@ -28,8 +28,11 @@ class ViewMapper {
     val res = stmt.executeQuery(ParsingSQLCommand)
 
     while (res.next()) {
-      if(res.getString(1).contains(".")) {
-        val view = res.getString(1).split("\\.")(1)
+//      if(res.getString(1).contains(".")) {
+        val view =
+          if(res.getString(1).contains(".")) {
+          res.getString(1).split("\\.")(1)
+        }else null
         val db = res.getString(2)
         val table =  res.getString(3)
         val year = res.getString(4)
@@ -41,9 +44,9 @@ class ViewMapper {
         else if (month == "v" && day == "v") addItem("D", view, s"$db.$table")
         else if(month == "v") addItem("M", view, s"$db.$table")
         else if(day == "v") addItem("D", view, s"$db.$table")
-        else if(year == "v") addItem("Y", view, s"$db.$table")
+//        else if(year == "v") addItem("Y", view, s"$db.$table")
 //        else addItem("D", view, s"$db.$table")
-      }
+      //}
     }
   }
 

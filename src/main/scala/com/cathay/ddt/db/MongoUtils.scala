@@ -38,6 +38,7 @@ object MongoUtils extends TagDictionaryExtension {
     writeRes.map(_.ok)
   }
 
+  /* Remove Documents */
   def remove(coll: BSONCollection, selector: BSONDocument): Future[Boolean] = {
     val futureRemove = coll.remove(selector /*, firstMatchOnly = true*/)
 
@@ -47,9 +48,6 @@ object MongoUtils extends TagDictionaryExtension {
     }
     futureRemove.map(_.ok)
   }
-
-
-
 
   /* Find Documents */
   def findDictionaries(collection: BSONCollection, query: BSONDocument)(implicit ec: ExecutionContext): Future[List[TagDictionary]] = {

@@ -60,7 +60,7 @@ trait ApiRoute {
           import com.cathay.ddt.tagging.protocal.DynamicTDProtocol._
 
           (post & entity(as[DynamicTD])) { dtd =>
-            var bArr = ArrayBuffer[BSONDocument]()
+//            var bArr = ArrayBuffer[BSONDocument]()
 //            var query = BSONDocument()
 //            if(dtd.source_type.isDefined) {
 //              query ++= BSONDocument("source_type" -> dtd.source_type.get)
@@ -97,19 +97,25 @@ trait ApiRoute {
             OK -> TD
           }
         } ~
+        (delete & path(Segment)) { id =>
+          onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.remove(coll, BSONDocument("tag_id" -> id)))) {
+            case true =>
+              complete(StatusCodes.OK, JsObject(
+                "message" -> JsString(s"tagID[${id}] remove successfully.")
+              ))
+            case false =>
+              complete(StatusCodes.BadRequest, JsObject(
+                "message" -> JsString(s"tagID[${id}] remove failed.")
+              ))
+          }
+        } ~
         (get) {
           complete {
             val ListTD = MongoConnector.getTDCollection.flatMap(coll => MongoUtils.findDictionaries(coll, BSONDocument()))
             OK -> ListTD
-            //            map { ts =>
-            //              OK -> ts
-            //            }
           }
         }
-
-
     }
-
 
   }
 }

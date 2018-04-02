@@ -57,13 +57,18 @@ object Query extends App {
 
 //  val query4 = BSONDocument("tag_name" -> "超市購物", "tag_type" -> BSONArray())
 
-  var query0 = BSONDocument()
-  query0 ++= BSONDocument("tag_name" -> "超市購物")
-  query0 ++= BSONDocument("update_frequency" -> "M")
+//  var query0 = BSONDocument()
+//  query0 ++= BSONDocument("tag_name" -> "超市購物")
+//  query0 ++= BSONDocument("update_frequency" -> "M")
+//
+//  println(query0)
+//  FBsonCollection.flatMap(x => MongoUtils.findOneDictionary(x, query0)).map { docList =>
+//    println(docList)
+//  }
 
-  println(query0)
-  FBsonCollection.flatMap(x => MongoUtils.findOneDictionary(x, query0)).map { docList =>
-    println(docList)
+  FBsonCollection.flatMap(coll => MongoUtils.remove(coll, BSONDocument("tag_id" -> "123"))).onSuccess {
+    case result =>
+      println(s"successfully or not: $result")
   }
 
 }
