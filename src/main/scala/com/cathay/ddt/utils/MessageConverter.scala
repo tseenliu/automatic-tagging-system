@@ -120,7 +120,7 @@ object MessageConverter extends CalendarConverter {
       try {
         set += map(table)
       }catch {
-        case keyNotFound: NoSuchElementException => println(s"[ERROR] $keyNotFound")
+        case keyNotFound: NoSuchElementException => println(s"[ERROR] view table $table: $keyNotFound")
         case _: Throwable => println("Got some other kind of exception")
       }
     }

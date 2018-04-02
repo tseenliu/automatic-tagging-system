@@ -310,12 +310,13 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
       }
 
     case Event(Report(success, frequencyType, ctd), _) =>
-      println(s"[Info] Tag($frequency) ID[${ctd.actorID}] is producing finish topic.")
       // if success, produce and update
       if(success) {
+        println(s"[Info] Tag($frequency) ID[${ctd.actorID}] is producing finish topic.")
         MessageProducer.getProducer.sendToFinishTopic(frequencyType, ctd)
         updateAndCheck(ctd)
       }else {
+        println(s"[WARN] Tag($frequency) ID[${ctd.actorID}] is not finish and goto Receiving state.")
         ctd.update_frequency match {
           case "M" => goto (Receiving) applying Reset(Monthly)
           case "D" => goto (Receiving) applying Reset(Daily)
