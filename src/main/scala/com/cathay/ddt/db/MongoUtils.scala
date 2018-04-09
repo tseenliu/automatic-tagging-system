@@ -38,6 +38,27 @@ object MongoUtils extends TagDictionaryExtension {
     writeRes.map(_.ok)
   }
 
+  def update(coll: BSONCollection, selector: BSONDocument, modifier: TagDictionary): Future[Boolean] = {
+    // get a future update
+    val futureUpdate = coll.update(selector, modifier)
+
+    futureUpdate.onComplete { // Dummy callbacks
+      case Failure(e) => e.printStackTrace()
+      case Success(writeResult) =>
+        println(s"successfully inserted document with result: $writeResult")
+    }
+    futureUpdate.map(result => result.ok)
+  }
+
+  def updateFind(collection: BSONCollection, selector: BSONDocument, modifier: TagDictionary): Future[Option[TagDictionary]] = {
+    import collection.BatchCommands.FindAndModifyCommand.FindAndModifyResult
+
+    val result: Future[FindAndModifyResult] = collection.findAndUpdate(
+      selector, modifier, fetchNewObject = true, upsert = true)
+
+    result.map(x => x.result[TagDictionary])
+  }
+
   /* Remove Documents */
   def remove(coll: BSONCollection, selector: BSONDocument): Future[Boolean] = {
     val futureRemove = coll.remove(selector /*, firstMatchOnly = true*/)
@@ -64,15 +85,6 @@ object MongoUtils extends TagDictionaryExtension {
   def findOneDictionary(collection: BSONCollection, query: BSONDocument)(implicit ec: ExecutionContext): Future[TagDictionary] = {
 //    implicit val reader = Macros.reader[TagDictionary]
     collection.find(query).requireOne[TagDictionary]
-  }
-
-  def updateFind(collection: BSONCollection, selector: BSONDocument, modifier: TagDictionary): Future[Option[TagDictionary]] = {
-    import collection.BatchCommands.FindAndModifyCommand.FindAndModifyResult
-
-    val result: Future[FindAndModifyResult] = collection.findAndUpdate(
-      selector, modifier, fetchNewObject = true, upsert = true)
-
-    result.map(x => x.result[TagDictionary])
   }
 
 }

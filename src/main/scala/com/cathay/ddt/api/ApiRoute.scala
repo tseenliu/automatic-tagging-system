@@ -37,6 +37,7 @@ trait ApiRoute {
 
   val route = handleExceptions(myExceptionHandler) {
     pathPrefix("tags") {
+      // write operation
       import com.cathay.ddt.tagging.protocal.TDProtocol._
 
       (post & entity(as[TagDictionary])) { td =>
@@ -56,6 +57,34 @@ trait ApiRoute {
             ))
         }
       } ~
+        // update operation
+        path(Segment) { id =>
+          put {
+            entity(as[TagDictionary]) { td =>
+//              complete {
+//                val query = BSONDocument("tag_id" -> id)
+//                val TD = MongoConnector.getTDCollection.flatMap(coll => MongoUtils.updateFind(coll, query, td))
+//                OK -> TD
+//              }
+              val query = BSONDocument("tag_id" -> id)
+              val modifier = BSONDocument(
+                "$set" -> BSONDocument(
+                  "score_method" -> "London"))
+              onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.update(coll, query, td))) {
+                case true =>
+                  complete(StatusCodes.OK, JsObject(
+                    "message" -> JsString(s"tagID[${td.tag_id}] update successfully.")
+                  ))
+                case false =>
+                  complete(StatusCodes.BadRequest, JsObject(
+                    "message" -> JsString("tagID[${td.tag_id}] update failed.")
+                  ))
+              }
+            }
+          }
+
+        } ~
+        // find operation
         path("search") {
           import com.cathay.ddt.tagging.protocal.DynamicTDProtocol._
 
@@ -97,6 +126,7 @@ trait ApiRoute {
             OK -> TD
           }
         } ~
+        // remove operation
         (delete & path(Segment)) { id =>
           onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.remove(coll, BSONDocument("tag_id" -> id)))) {
             case true =>
@@ -109,6 +139,7 @@ trait ApiRoute {
               ))
           }
         } ~
+        // find all operation
         (get) {
           complete {
             val ListTD = MongoConnector.getTDCollection.flatMap(coll => MongoUtils.findDictionaries(coll, BSONDocument()))

@@ -13,7 +13,7 @@ import spray.json._
 
 object Insert extends App {
   val connection1 = MongoConnector.connection
-  val FBsonCollection = MongoConnector.dbFromConnection(connection1, "tag", "scoretag_2")
+  val FBsonCollection = MongoConnector.dbFromConnection(connection1, "tag", "scoretag_api")
 
 //  def randomString(length: Int) = scala.util.Random.alphanumeric.take(length).mkString
 //
@@ -60,10 +60,10 @@ object Insert extends App {
 //  }
 
   def randomString(length: Int) = scala.util.Random.alphanumeric.take(length).mkString
-  for (i <- 1 to 8) {
+  for (i <- 1 to 2) {
     val neilYoung = TagDictionary(
       tag_id = randomString(20),
-      source_type = "bank",
+      source_type = "Alex",
       source_item = "信用卡/簽帳卡",
       tag_type = List(TagType("A", "b"), TagType("C", "c")),
       tag_name = "超市購物",
@@ -83,8 +83,8 @@ object Insert extends App {
           |AND concat(substr('''$end_date''',1,4),substr('''$end_date''',6,2))
         """.stripMargin.trim,
       update_frequency = "D",
-      started = Some(-i),
-      traced = Some(i),
+      started = None,
+      traced = None,
       description = "超市購買族群",
       disable_flag = Option(false),
       create_time = "2018-03-12",
