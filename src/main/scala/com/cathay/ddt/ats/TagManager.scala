@@ -45,7 +45,7 @@ object TagManager extends EnvLoader {
   sealed trait ManagerCommand
   case class Load(doc: TagDictionary) extends ManagerCommand
   case class Register(doc: TagDictionary) extends ManagerCommand
-  case class Delete(id: String) extends ManagerCommand
+  case class StopTag(id: String) extends ManagerCommand
   case class Remove(id: String) extends ManagerCommand
 
   case object ShowState extends ManagerCommand
@@ -56,7 +56,7 @@ object TagManager extends EnvLoader {
   case class TagRegister(tagDic: TagDictionary) extends ManagerOperation
   case class TagMesAdded(id: String, tagMessage: Message) extends ManagerOperation
   case class TagMesUpdated(ti: TagInstance, actorRef: ActorRef) extends ManagerOperation
-  case class TagInsDelete(id: String) extends ManagerOperation
+  case class TagInsStop(id: String) extends ManagerOperation
   case class TagInsRemoved(id: String) extends ManagerOperation
 
 
@@ -97,11 +97,17 @@ object TagManager extends EnvLoader {
       TIsRegistry(newState)
     }
 
-    def delete(id: String): TIsRegistry = {
+    def stop(id: String): TIsRegistry = {
       val tagIns = getTI(id).get
       val dTagIns = TagInstance(tagIns.frequency.toUpperCase(), tagIns.id)
       val messageSet = state(tagIns)
       val newState = state - tagIns + (dTagIns -> messageSet)
+      TIsRegistry(newState)
+    }
+
+    def remove(id: String): TIsRegistry = {
+      val tagIns = getTI(id).get
+      val newState = state - tagIns
       TIsRegistry(newState)
     }
 
@@ -133,6 +139,15 @@ object TagManager extends EnvLoader {
       }
     }
 
+    def reomveUpdate(messages: Set[Message], oldTI: TagInstance, newTI: TagInstance): TMsRegistry = {
+      var newState: Map[Message, Set[TagInstance]] = state
+      messages.foldLeft(this){ (registry, mes) =>
+        val newSet = newState(mes) - oldTI + newTI
+        newState = newState + (mes -> newSet)
+        TMsRegistry(newState)
+      }
+    }
+
     def getNumsOfTables: Int = {
       state.size
     }
@@ -145,8 +160,8 @@ object TagManager extends EnvLoader {
     def getTIs(message: Message): Set[TagInstance] = tagMesReg.getTIs(message)
     def getTIs: Set[TagInstance] = tagInstReg.getTIs
     def getTMs(ti: TagInstance): Set[Message] = tagInstReg.getTMs(ti)
-    def delete(id: String): State = {
-      val newTagInsReg = tagInstReg.delete(id)
+    def stop(id: String): State = {
+      val newTagInsReg = tagInstReg.stop(id)
       State(
         newTagInsReg,
         tagMesReg.update(tagInstReg.getTMs(tagInstReg.getTI(id).get), tagInstReg.getTI(id).get, newTagInsReg.getTI(id).get)
@@ -216,8 +231,8 @@ class TagManager extends PersistentActor with ActorLogging {
     case Evt(TagMesUpdated(ti, actorRef)) =>
       state = state.update(ti, actorRef)
       saveSnapshot(state)
-    case Evt(TagInsDelete(ti)) =>
-      state = state.delete(ti)
+    case Evt(TagInsStop(ti)) =>
+      state = state.stop(ti)
       saveSnapshot(state)
   }
 
@@ -278,8 +293,8 @@ class TagManager extends PersistentActor with ActorLogging {
         }
       }
 
-    case cmd @ Cmd(Delete(id))  =>
-      persist(Evt(TagInsDelete(id))) { evt =>
+    case cmd @ Cmd(StopTag(id))  =>
+      persist(Evt(TagInsStop(id))) { evt =>
         updateState(evt)
       }
 

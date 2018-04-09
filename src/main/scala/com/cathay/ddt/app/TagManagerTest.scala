@@ -1,6 +1,6 @@
 package com.cathay.ddt.app
 
-import com.cathay.ddt.ats.TagManager.{Cmd, Delete, ShowState}
+import com.cathay.ddt.ats.TagManager.{Cmd, StopTag, ShowState}
 import com.cathay.ddt.ats._
 import com.cathay.ddt.utils.EnvLoader
 

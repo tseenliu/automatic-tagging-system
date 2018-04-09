@@ -1,7 +1,7 @@
 package com.cathay.ddt.app
 
-import com.cathay.ddt.tagging.protocal.DynamicTDProtocol
-import com.cathay.ddt.tagging.schema.{ComposeTD, DynamicTD, TagDictionary, TagType}
+import com.cathay.ddt.tagging.protocal.QueryTDProtocol
+import com.cathay.ddt.tagging.schema.{ComposeTD, QueryTD, TagDictionary, TagType}
 import com.cathay.ddt.utils.{HdfsClient, ViewMapper}
 import spray.json._
 
@@ -87,7 +87,7 @@ object HdfsTest extends App {
 //  println(s"status: $a")
 
 
-  val dynamicTD = DynamicTD(
+  val dynamicTD = QueryTD(
     source_type = Some("bank"),
     source_item = Some("信用卡/簽帳卡"),
     tag_type = Some(List(TagType("D","d"), TagType("E","e"))),
@@ -100,12 +100,12 @@ object HdfsTest extends App {
     system_name = Some("ATS")
   )
 
-  import com.cathay.ddt.tagging.protocal.DynamicTDProtocol._
+  import com.cathay.ddt.tagging.protocal.QueryTDProtocol._
   val json = dynamicTD.toJson
   println(json.prettyPrint)
 
 
   val aaa = """{update_frequency: M, source_type: bank}""".toJson
-  val taaa = aaa.asInstanceOf[DynamicTD]
+  val taaa = aaa.asInstanceOf[QueryTD]
   println(taaa.toJson.prettyPrint)
 }

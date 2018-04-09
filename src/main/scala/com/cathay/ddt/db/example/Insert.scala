@@ -94,10 +94,10 @@ object Insert extends App {
       creator = "Roger",
       is_focus = true,
       system_name = "ATS")
-    FBsonCollection.flatMap( coll => MongoUtils.insert(coll, neilYoung) ).onSuccess {
-      case result =>
-        println(s"successfully or not: $result")
-    }
+//    FBsonCollection.flatMap( coll => MongoUtils.insert(coll, neilYoung) ).onSuccess {
+//      case result =>
+//        println(s"successfully or not: $result")
+//    }
   }
 
 

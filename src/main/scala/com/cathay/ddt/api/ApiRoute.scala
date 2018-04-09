@@ -10,10 +10,9 @@ import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
 import akka.http.scaladsl.server.ExceptionHandler
-import com.cathay.ddt.tagging.schema.{DynamicTD, TagDictionary}
+import com.cathay.ddt.tagging.schema.{DynamicTD, QueryTD, TagDictionary}
 import reactivemongo.bson.{BSONArray, BSONDocument}
 
-import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 
 trait ApiRoute {
@@ -37,58 +36,57 @@ trait ApiRoute {
 
   val route = handleExceptions(myExceptionHandler) {
     pathPrefix("tags") {
-      // write operation
       import com.cathay.ddt.tagging.protocal.TDProtocol._
-
-      (post & entity(as[TagDictionary])) { td =>
-        //        complete {
-        //          MongoConnector.getTDCollection.flatMap( coll => MongoUtils.insert(coll, td) ) map {
-        //            case true => Created -> Map("tag_id" -> td.tag_id).toJson
-        //          }
-        //        }
-        onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.insert(coll, td))) {
-          case true =>
-            complete(StatusCodes.OK, JsObject(
-              "message" -> JsString(s"tagID[${td.tag_id}] insert successfully.")
-            ))
-          case false =>
-            complete(StatusCodes.BadRequest, JsObject(
-              "message" -> JsString("tagID[${td.tag_id}] insert failed.")
-            ))
+      import com.cathay.ddt.tagging.protocal.DynamicTDProtocol._
+      pathEnd {
+        // write operation
+        (post & entity(as[DynamicTD])) { td =>
+          //        complete {
+          //          MongoConnector.getTDCollection.flatMap( coll => MongoUtils.insert(coll, td) ) map {
+          //            case true => Created -> Map("tag_id" -> td.tag_id).toJson
+          //          }
+          //        }
+          onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.insert(coll, td))) {
+            case true =>
+              complete(StatusCodes.OK, JsObject(
+                "message" -> JsString(s"tagID[${td.tag_id}] insert successfully.")
+              ))
+            case false =>
+              complete(StatusCodes.BadRequest, JsObject(
+                "message" -> JsString("tagID[${td.tag_id}] insert failed.")
+              ))
+          }
         }
+
       } ~
-        // update operation
-        path(Segment) { id =>
-          put {
-            entity(as[TagDictionary]) { td =>
+      // update operation
+      path(Segment) { id =>
+        put {
+          entity(as[DynamicTD]) { td =>
 //              complete {
 //                val query = BSONDocument("tag_id" -> id)
 //                val TD = MongoConnector.getTDCollection.flatMap(coll => MongoUtils.updateFind(coll, query, td))
 //                OK -> TD
 //              }
-              val query = BSONDocument("tag_id" -> id)
-              val modifier = BSONDocument(
-                "$set" -> BSONDocument(
-                  "score_method" -> "London"))
-              onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.update(coll, query, td))) {
-                case true =>
-                  complete(StatusCodes.OK, JsObject(
-                    "message" -> JsString(s"tagID[${td.tag_id}] update successfully.")
-                  ))
-                case false =>
-                  complete(StatusCodes.BadRequest, JsObject(
-                    "message" -> JsString("tagID[${td.tag_id}] update failed.")
-                  ))
-              }
+            val query = BSONDocument("tag_id" -> id)
+            onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.update(coll, query, td))) {
+              case true =>
+                complete(StatusCodes.OK, JsObject(
+                  "message" -> JsString(s"tagID[${td.tag_id}] update successfully.")
+                ))
+              case false =>
+                complete(StatusCodes.BadRequest, JsObject(
+                  "message" -> JsString("tagID[${td.tag_id}] update failed.")
+                ))
             }
           }
+        }
 
-        } ~
+      } ~
         // find operation
         path("search") {
-          import com.cathay.ddt.tagging.protocal.DynamicTDProtocol._
-
-          (post & entity(as[DynamicTD])) { dtd =>
+          import com.cathay.ddt.tagging.protocal.QueryTDProtocol._
+          (post & entity(as[QueryTD])) { dtd =>
 //            var bArr = ArrayBuffer[BSONDocument]()
 //            var query = BSONDocument()
 //            if(dtd.source_type.isDefined) {
@@ -118,6 +116,7 @@ trait ApiRoute {
               OK -> MongoConnector.getTDCollection.flatMap(coll => MongoUtils.findDictionaries(coll, dtd))
             }
           }
+
         } ~
         (get & path(Segment)) { id =>
           complete {
@@ -125,6 +124,7 @@ trait ApiRoute {
             val TD = MongoConnector.getTDCollection.flatMap(coll => MongoUtils.findOneDictionary(coll, query))
             OK -> TD
           }
+
         } ~
         // remove operation
         (delete & path(Segment)) { id =>
@@ -138,10 +138,12 @@ trait ApiRoute {
                 "message" -> JsString(s"tagID[${id}] remove failed.")
               ))
           }
+
         } ~
         // find all operation
         (get) {
           complete {
+            import com.cathay.ddt.tagging.protocal.DynamicTDProtocol._
             val ListTD = MongoConnector.getTDCollection.flatMap(coll => MongoUtils.findDictionaries(coll, BSONDocument()))
             OK -> ListTD
           }

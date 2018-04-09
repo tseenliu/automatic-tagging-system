@@ -6,20 +6,17 @@ import scala.reflect._
 import akka.persistence._
 import akka.persistence.fsm._
 import akka.persistence.fsm.PersistentFSM.FSMState
-import com.cathay.ddt.ats.TagManager.{Cmd, Delete}
+import com.cathay.ddt.ats.TagManager.{Cmd, StopTag}
 import com.cathay.ddt.ats.TagScheduler.{Schedule, ScheduleInstance}
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import com.cathay.ddt.kafka.MessageProducer
 import com.cathay.ddt.tagging.schema.{ComposeTD, Dictionary, TagDictionary, TagMessage}
 import com.cathay.ddt.tagging.schema.TagMessage.{Message, SimpleTagMessage}
-import com.cathay.ddt.utils.{CalendarConverter, HdfsClient}
+import com.cathay.ddt.utils.CalendarConverter
 import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import com.cathay.ddt.tagging.protocal.ComposeTDProtocal._
-import spray.json._
-
 
 
 /**
@@ -340,7 +337,7 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
   when(Verifying){
     case Event(Check, metadata) =>
       if(metadata.isMonthlyNull) {
-        context.parent ! Cmd(Delete(id))
+        context.parent ! Cmd(StopTag(id))
         stop()
       }else goto(Receiving)
 
@@ -352,7 +349,7 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
 
       } else if(stateData.asInstanceOf[Metadata].monthlyAlreadyRun.get == getLastMonth) {
         println(s"[Info] Tag($frequency) ID[$id] is already run in this Month[${stateData.asInstanceOf[Metadata].monthlyAlreadyRun}].")
-        context.parent ! Cmd(Delete(id))
+        context.parent ! Cmd(StopTag(id))
         stop()
 
       } else if(getCurrentDate >= getDayOfMonth(-numsOfDelayMonth)) {

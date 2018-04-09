@@ -1,6 +1,6 @@
 package com.cathay.ddt.db
 
-import com.cathay.ddt.tagging.schema.{DynamicTD, TagDictionary}
+import com.cathay.ddt.tagging.schema.{DynamicTD, QueryTD, TagDictionary}
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.{BSONDocument, Macros}
@@ -28,7 +28,8 @@ object MongoUtils extends TagDictionaryExtension {
     //writeRes.map(_ => {}) // in this example, do nothing with the success
   }
 
-  def insert(coll: BSONCollection, td: TagDictionary): Future[Boolean] = {
+  def insert(coll: BSONCollection, td: DynamicTD): Future[Boolean] = {
+    implicit val dynamicTDHandler = Macros.handler[DynamicTD]
     val writeRes: Future[WriteResult] = coll.insert(td)
     writeRes.onComplete { // Dummy callbacks
       case Failure(e) => e.printStackTrace()
@@ -38,14 +39,15 @@ object MongoUtils extends TagDictionaryExtension {
     writeRes.map(_.ok)
   }
 
-  def update(coll: BSONCollection, selector: BSONDocument, modifier: TagDictionary): Future[Boolean] = {
+  def update(coll: BSONCollection, selector: BSONDocument, modifier: DynamicTD): Future[Boolean] = {
     // get a future update
+    implicit val dynamicTDHandler = Macros.handler[DynamicTD]
     val futureUpdate = coll.update(selector, modifier)
 
     futureUpdate.onComplete { // Dummy callbacks
       case Failure(e) => e.printStackTrace()
       case Success(writeResult) =>
-        println(s"successfully inserted document with result: $writeResult")
+        println(s"successfully updated document with result: $writeResult")
     }
     futureUpdate.map(result => result.ok)
   }
@@ -76,9 +78,9 @@ object MongoUtils extends TagDictionaryExtension {
     collection.find(query).cursor[TagDictionary]().collect[List]()
   }
 
-  def findDictionaries(collection: BSONCollection, query: DynamicTD)(implicit ec: ExecutionContext): Future[List[TagDictionary]] = {
+  def findDictionaries(collection: BSONCollection, query: QueryTD)(implicit ec: ExecutionContext): Future[List[TagDictionary]] = {
     //    implicit val reader = Macros.reader[TagDictionary]
-    implicit val dynamicTDHandler = Macros.handler[DynamicTD]
+    implicit val queryTDHandler = Macros.handler[QueryTD]
     collection.find(query).cursor[TagDictionary]().collect[List]()
   }
 
