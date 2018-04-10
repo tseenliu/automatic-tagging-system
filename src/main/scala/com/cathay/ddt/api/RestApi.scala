@@ -1,12 +1,14 @@
 package com.cathay.ddt.api
 
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, Materializer}
+import akka.stream.ActorMaterializer
 import akka.http.scaladsl.Http
+import com.cathay.ddt.utils.EnvLoader
 
-object RestApi extends App with ApiRoute {
+object RestApi extends App with ApiRoute with EnvLoader {
 
-  override implicit val system = ActorSystem("mongo-rest-api")
+  val config = getConfig("api")
+  override implicit val system = ActorSystem("mongo-rest-api", config)
 
   override implicit val materializer = ActorMaterializer()
 

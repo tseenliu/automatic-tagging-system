@@ -47,6 +47,7 @@ object TagManager extends EnvLoader {
   case class Register(doc: TagDictionary) extends ManagerCommand
   case class StopTag(id: String) extends ManagerCommand
   case class Remove(id: String) extends ManagerCommand
+  case class Update(doc: TagDictionary) extends ManagerCommand
 
   case object ShowState extends ManagerCommand
 
@@ -55,9 +56,10 @@ object TagManager extends EnvLoader {
   //sealed trait TIOperation extends ManagerOperation
   case class TagRegister(tagDic: TagDictionary) extends ManagerOperation
   case class TagMesAdded(id: String, tagMessage: Message) extends ManagerOperation
-  case class TagMesUpdated(ti: TagInstance, actorRef: ActorRef) extends ManagerOperation
-  case class TagInsStop(id: String) extends ManagerOperation
+  case class TagInsActorCreated(ti: TagInstance, actorRef: ActorRef) extends ManagerOperation
+  case class TagInsStopped(id: String) extends ManagerOperation
   case class TagInsRemoved(id: String) extends ManagerOperation
+  case class TagInsUpdated(id: String, tagMessage: Set[Message]) extends ManagerOperation
 
 
   case class Cmd(op: ManagerCommand)
@@ -89,6 +91,11 @@ object TagManager extends EnvLoader {
       val tagIns = getTI(id).get
       val messageSet = state(tagIns) ++ Set(tagMessage)
       TIsRegistry(state + (tagIns -> messageSet))
+    }
+
+    def updateAdd(id: String, tagMessages: Set[Message]): TIsRegistry = {
+      val tagIns = getTI(id).get
+      TIsRegistry(state + (tagIns -> tagMessages))
     }
 
     def update(oldTI: TagInstance, newTI: TagInstance): TIsRegistry = {
@@ -130,6 +137,20 @@ object TagManager extends EnvLoader {
       }
     }
 
+    def updateAdd(tagMessages: Iterator[Message], tagInst: TagInstance): TMsRegistry = {
+      var newState: Map[Message, Set[TagInstance]] = state
+      while (tagMessages.hasNext){
+        val value = tagMessages.next()
+        if(!state.contains(value)) {
+          newState += (value -> Set(tagInst))
+        } else {
+          val newSet = state(value) ++ Set(tagInst)
+          newState += (value -> newSet)
+        }
+      }
+      TMsRegistry(newState)
+    }
+
     def update(messages: Set[Message], oldTI: TagInstance, newTI: TagInstance): TMsRegistry = {
       var newState: Map[Message, Set[TagInstance]] = state
       messages.foldLeft(this){ (registry, mes) =>
@@ -139,11 +160,12 @@ object TagManager extends EnvLoader {
       }
     }
 
-    def reomveUpdate(messages: Set[Message], oldTI: TagInstance, newTI: TagInstance): TMsRegistry = {
+    def removeUpdate(messages: Set[Message], oldTI: TagInstance): TMsRegistry = {
       var newState: Map[Message, Set[TagInstance]] = state
       messages.foldLeft(this){ (registry, mes) =>
-        val newSet = newState(mes) - oldTI + newTI
-        newState = newState + (mes -> newSet)
+        val newSet = newState(mes) - oldTI
+        if(newSet.isEmpty) newState = newState - mes
+        else newState = newState + (mes -> newSet)
         TMsRegistry(newState)
       }
     }
@@ -168,24 +190,40 @@ object TagManager extends EnvLoader {
       )
     }
 
+    def remove(id: String): State = {
+      val newTagInsReg = tagInstReg.remove(id)
+      State(
+        newTagInsReg,
+        tagMesReg.removeUpdate(tagInstReg.getTMs(tagInstReg.getTI(id).get), tagInstReg.getTI(id).get)
+      )
+    }
+
     def add(id: String, tagMessage: Message): State =
       State(
         tagInstReg.add(id, tagMessage),
         tagMesReg.add(tagMessage, tagInstReg.getTI(id).get)
       )
 
-    def update(oldTI: TagInstance, actor: ActorRef): State = {
+    def createActor(oldTI: TagInstance, actor: ActorRef): State = {
       val newTI = TagInstance(oldTI.frequency.toUpperCase(), oldTI.id, Some(actor))
       State(
         tagInstReg.update(oldTI, newTI),
         tagMesReg.update(tagInstReg.getTMs(oldTI), oldTI, newTI))
     }
 
+    def update(id: String, tagMessages: Set[Message]): State = {
+      val removeTagMesReg = tagMesReg.removeUpdate(tagInstReg.getTMs(tagInstReg.getTI(id).get), tagInstReg.getTI(id).get)
+      State(
+        tagInstReg.updateAdd(id, tagMessages),
+        removeTagMesReg.updateAdd(tagMessages.toIterator, tagInstReg.getTI(id).get)
+      )
+    }
+
     def initActors(createActor: (String, String) => ActorRef): State = {
       val registry = getTIs.foldLeft(this) { (state, ti) =>
         if (ti.isActive) {
           val actorRef = createActor(ti.frequency, ti.id)
-          state.update(ti, actorRef)
+          state.createActor(ti, actorRef)
         } else state
       }
       registry
@@ -228,11 +266,17 @@ class TagManager extends PersistentActor with ActorLogging {
     case Evt(TagMesAdded(id, message)) =>
       state = state.add(id, message)
       saveSnapshot(state)
-    case Evt(TagMesUpdated(ti, actorRef)) =>
-      state = state.update(ti, actorRef)
+    case Evt(TagInsActorCreated(ti, actorRef)) =>
+      state = state.createActor(ti, actorRef)
       saveSnapshot(state)
-    case Evt(TagInsStop(ti)) =>
-      state = state.stop(ti)
+    case Evt(TagInsStopped(id)) =>
+      state = state.stop(id)
+      saveSnapshot(state)
+    case Evt(TagInsRemoved(id)) =>
+      state = state.remove(id)
+      saveSnapshot(state)
+    case Evt(TagInsUpdated(id, tms)) =>
+      state = state.update(id, tms)
       saveSnapshot(state)
   }
 
@@ -246,7 +290,7 @@ class TagManager extends PersistentActor with ActorLogging {
       case false =>
         println("Initial require messages error.")
     }
-    persist(Evt(TagMesUpdated(ti, actorRef))) { evt =>
+    persist(Evt(TagInsActorCreated(ti, actorRef))) { evt =>
       updateState(evt)
     }
   }
@@ -284,6 +328,26 @@ class TagManager extends PersistentActor with ActorLogging {
         println(s"tagID: ${tagDic.actorID} is already exist.")
       }
 
+    case cmd @ Cmd(StopTag(id)) =>
+      persist(Evt(TagInsStopped(id))) { evt =>
+        updateState(evt)
+      }
+
+    case cmd @ Cmd(Remove(id)) =>
+      persist(Evt(TagInsRemoved(id))) { evt =>
+        updateState(evt)
+      }
+
+    case cmd @ Cmd(Update(tagDic)) =>
+      val tagMessages = MessageConverter.getMessages(tagDic.sql).toSet
+      persist(Evt(TagInsUpdated(tagDic.tag_id, tagMessages))) { evt =>
+        updateState(evt)
+      }
+      val ti = state.tagInstReg.getTI(tagDic.tag_id)
+      if(ti.isDefined) {
+        ti.get.actor.get ! Requirement(tagMessages)
+      }
+
     case tagMessage: TagMessage  =>
       val message = tagMessage.getDefaultTM
       if (state.contains(message)) {
@@ -291,11 +355,6 @@ class TagManager extends PersistentActor with ActorLogging {
           if (ti.isActive) ti.actor.get ! Receipt(tagMessage)
           else createAndSend(ti, tagMessage)
         }
-      }
-
-    case cmd @ Cmd(StopTag(id))  =>
-      persist(Evt(TagInsStop(id))) { evt =>
-        updateState(evt)
       }
 
     case Cmd(ShowState) =>

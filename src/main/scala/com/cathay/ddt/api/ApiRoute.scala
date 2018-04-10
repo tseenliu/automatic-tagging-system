@@ -2,16 +2,17 @@ package com.cathay.ddt.api
 
 import org.slf4j.LoggerFactory
 import spray.json._
-import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, Materializer}
+import akka.actor.{ActorSelection, ActorSystem}
+import akka.stream.Materializer
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.model.StatusCodes._
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
-import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.ExceptionHandler
+import com.cathay.ddt.ats.TagManager._
 import com.cathay.ddt.tagging.schema.{DynamicTD, QueryTD, TagDictionary}
-import reactivemongo.bson.{BSONArray, BSONDocument}
+import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.ExecutionContext
 
@@ -21,6 +22,30 @@ trait ApiRoute {
   implicit val materializer: Materializer
   implicit val ec: ExecutionContext
 
+  implicit def convertTD(dtd: DynamicTD): TagDictionary = {
+    TagDictionary(
+      dtd.tag_id.get,
+      dtd.source_type.get,
+      dtd.source_item.get,
+      dtd.tag_type.get,
+      dtd.tag_name.get,
+      dtd.sql.get,
+      dtd.update_frequency.get,
+      dtd.started,
+      dtd.traced,
+      dtd.description.get,
+      dtd.create_time.get,
+      dtd.update_time.get,
+      dtd.disable_flag,
+      dtd.score_method.get,
+      dtd.attribute.get,
+      dtd.creator.get,
+      dtd.is_focus.get,
+      dtd.system_name.get
+    )
+  }
+
+  // logging
   val log = LoggerFactory.getLogger(this.getClass)
 
   val myExceptionHandler = ExceptionHandler {
@@ -35,6 +60,10 @@ trait ApiRoute {
   }
 
   val route = handleExceptions(myExceptionHandler) {
+
+    val tagManagerSelection: ActorSelection =
+      system.actorSelection("akka.tcp://tag@127.0.0.1:2551/user/tag-manager")
+
     pathPrefix("tags") {
       import com.cathay.ddt.tagging.protocal.TDProtocol._
       import com.cathay.ddt.tagging.protocal.DynamicTDProtocol._
@@ -48,6 +77,9 @@ trait ApiRoute {
           //        }
           onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.insert(coll, td))) {
             case true =>
+              tagManagerSelection ! Cmd(Load(convertTD(td)))
+              Thread.sleep(500)
+              tagManagerSelection ! Cmd(ShowState)
               complete(StatusCodes.OK, JsObject(
                 "message" -> JsString(s"tagID[${td.tag_id}] insert successfully.")
               ))
@@ -71,6 +103,9 @@ trait ApiRoute {
             val query = BSONDocument("tag_id" -> id)
             onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.update(coll, query, td))) {
               case true =>
+                tagManagerSelection ! Cmd(Update(convertTD(td)))
+                Thread.sleep(500)
+                tagManagerSelection ! Cmd(ShowState)
                 complete(StatusCodes.OK, JsObject(
                   "message" -> JsString(s"tagID[${td.tag_id}] update successfully.")
                 ))
@@ -130,6 +165,9 @@ trait ApiRoute {
         (delete & path(Segment)) { id =>
           onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.remove(coll, BSONDocument("tag_id" -> id)))) {
             case true =>
+              tagManagerSelection ! Cmd(Remove(id))
+              Thread.sleep(500)
+              tagManagerSelection ! Cmd(ShowState)
               complete(StatusCodes.OK, JsObject(
                 "message" -> JsString(s"tagID[${id}] remove successfully.")
               ))

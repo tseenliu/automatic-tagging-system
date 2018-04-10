@@ -229,7 +229,6 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
         sender() ! true
         saveStateSnapshot()
         println(s"[Info] Tag($frequency, ID($id):\n$stateData")
-//        println(stateData)
       }
 
     case Event(Receipt(tm), _) =>
