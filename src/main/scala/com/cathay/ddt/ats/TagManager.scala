@@ -344,7 +344,7 @@ class TagManager extends PersistentActor with ActorLogging {
         updateState(evt)
       }
       val ti = state.tagInstReg.getTI(tagDic.tag_id)
-      if(ti.isDefined) {
+      if(ti.get.isActive) {
         ti.get.actor.get ! Requirement(tagMessages)
       }
 
