@@ -8,8 +8,24 @@
         </encoder>
     </appender>
 
+    <appender name="FILE"  class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <Encoding>UTF-8</Encoding>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>${PWD}/logs/log.%d{yyyy-MM-dd}.log</FileNamePattern>
+            <MaxHistory>3</MaxHistory>
+            <CleanHistoryOnStart>true</CleanHistoryOnStart>
+        </rollingPolicy>
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </layout>
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <MaxFileSize>10MB</MaxFileSize>
+        </triggeringPolicy>
+    </appender>
+
     <root level="error">
         <appender-ref ref="STDOUT" />
+        <appender-ref ref="FILE" />
     </root>
 
     <logger name="org.mongodb.driver" level="INFO"/>
@@ -17,5 +33,6 @@
     <logger name="reactivemongo.core.nodeset" level="INFO"/>
     <logger name="reactivemongo.api.MongoConnection" level="INFO"/>
     <logger name="io.swagger" level="INFO"/>
+    <logger name="ch.qos.logback" level="INFO"/>
 
 </configuration>
