@@ -8,19 +8,22 @@ import com.cathay.ddt.utils.EnvLoader
 object RestApi extends App with ApiRoute with EnvLoader {
 
   val config = getConfig("api")
-  override implicit val system = ActorSystem("mongo-rest-api", config)
+  val host = config.getString("api.host")
+  val port = config.getInt("api.port")
+
+  override implicit val system = ActorSystem("mongo-rest-api", config.getConfig("TagApi"))
 
   override implicit val materializer = ActorMaterializer()
 
   override implicit val ec = system.dispatcher
 
-  val bindingFuture = Http().bindAndHandle(route, config.getString("api.host"), config.getInt("api.port"))
+  val bindingFuture = Http().bindAndHandle(route, host, port)
 
-  println(s"Server online at http://localhost:8080/\nPress RETURN to stop...")
-  Console.readLine()
+  println(s"Server online at http://$host:$port/\nWelcome to use ATS rest api!")
+//  Console.readLine()
 
-  bindingFuture
-    .flatMap(_.unbind())
-    .onComplete(_ => system.terminate())
+//  bindingFuture
+//    .flatMap(_.unbind())
+//    .onComplete(_ => system.terminate())
 
 }

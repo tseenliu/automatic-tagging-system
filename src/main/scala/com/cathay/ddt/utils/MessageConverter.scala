@@ -129,8 +129,8 @@ object MessageConverter extends CalendarConverter {
 
   def getSqlMTable: Map[String, Message] = {
     if (sqlMTable.isEmpty) {
-      initialADW()
-//      initialFromLocal()
+//      initialADW()
+      initialFromLocal()
       sqlMTable
     } else {
       sqlMTable
@@ -139,8 +139,8 @@ object MessageConverter extends CalendarConverter {
 
   def getKafkaMTable: Map[String, String] = {
     if (kafkaMTable.isEmpty) {
-      initialADW()
-//      initialFromLocal()
+//      initialADW()
+      initialFromLocal()
       kafkaMTable
     } else {
       kafkaMTable

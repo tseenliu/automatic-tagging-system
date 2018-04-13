@@ -12,11 +12,16 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.ExceptionHandler
 import com.cathay.ddt.ats.TagManager._
 import com.cathay.ddt.tagging.schema.{DynamicTD, QueryTD, TagDictionary}
+import com.cathay.ddt.utils.EnvLoader
 import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.ExecutionContext
 
-trait ApiRoute {
+trait ApiRoute extends EnvLoader{
+
+  val tmConfig = getConfig("ats")
+  val tmHost = config.getString("ats.TagManager.akka.remote.netty.tcp.hostname")
+  val tmPort = config.getInt("ats.TagManager.akka.remote.netty.tcp.port")
 
   implicit val system: ActorSystem
   implicit val materializer: Materializer
@@ -62,7 +67,7 @@ trait ApiRoute {
   val route = handleExceptions(myExceptionHandler) {
 
     val tagManagerSelection: ActorSelection =
-      system.actorSelection("akka.tcp://tag@127.0.0.1:2551/user/tag-manager")
+      system.actorSelection(s"akka.tcp://tag@$tmHost:$tmPort/user/tag-manager")
 
     pathPrefix("tags") {
       import com.cathay.ddt.tagging.protocal.TDProtocol._

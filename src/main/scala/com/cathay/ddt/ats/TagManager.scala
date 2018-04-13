@@ -21,8 +21,9 @@ import scala.concurrent.duration._
 
 object TagManager extends EnvLoader {
 
+  val config = getConfig("ats")
   def initiate: ActorRef = {
-    val system = ActorSystem("tag")
+    val system = ActorSystem("tag", config.getConfig("ats.TagManager"))
     val tagManager = system.actorOf(Props[TagManager], name="tag-manager")
     system.actorOf(Props[TagScheduler], name="tag-scheduler")
     initialDictionary(tagManager)
