@@ -1,4 +1,4 @@
-package com.cathay.ddt.app
+package com.cathay.ddt.app.test
 
 import java.sql.{Connection, DriverManager}
 

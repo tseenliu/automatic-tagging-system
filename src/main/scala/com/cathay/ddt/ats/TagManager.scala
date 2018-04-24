@@ -1,7 +1,9 @@
 package com.cathay.ddt.ats
 
+import java.text.SimpleDateFormat
+
 import akka.persistence._
-import akka.actor.{ActorLogging, ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import com.cathay.ddt.kafka.MessageConsumer
 import com.cathay.ddt.tagging.schema.{TagDictionary, TagMessage}
@@ -10,7 +12,8 @@ import reactivemongo.bson.BSONDocument
 import com.cathay.ddt.ats.TagState._
 import akka.pattern.ask
 import akka.util.Timeout
-import com.cathay.ddt.utils.{EnvLoader, MessageConverter}
+import com.cathay.ddt.utils.{CalendarConverter, EnvLoader, MessageConverter}
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -21,7 +24,9 @@ import scala.concurrent.duration._
 
 object TagManager extends EnvLoader {
 
+  val log = LoggerFactory.getLogger(this.getClass)
   val config = getConfig("ats")
+
   def initiate: ActorRef = {
     val system = ActorSystem("tag", config.getConfig("ats.TagManager"))
     val tagManager = system.actorOf(Props[TagManager], name="tag-manager")
@@ -49,8 +54,9 @@ object TagManager extends EnvLoader {
   case class StopTag(id: String) extends ManagerCommand
   case class Remove(id: String) extends ManagerCommand
   case class Update(doc: TagDictionary) extends ManagerCommand
-
+  case object GetTagStatus extends ManagerCommand
   case object ShowState extends ManagerCommand
+  case class TimeChecker(time: String) extends ManagerCommand
 
 
   sealed trait ManagerOperation
@@ -183,6 +189,9 @@ object TagManager extends EnvLoader {
     def getTIs(message: Message): Set[TagInstance] = tagMesReg.getTIs(message)
     def getTIs: Set[TagInstance] = tagInstReg.getTIs
     def getTMs(ti: TagInstance): Set[Message] = tagInstReg.getTMs(ti)
+    def getAvailableActors: List[ActorRef] =
+      tagInstReg.state.keySet.filter(_.isActive).map(_.actor.get).toList
+
     def stop(id: String): State = {
       val newTagInsReg = tagInstReg.stop(id)
       State(
@@ -231,24 +240,28 @@ object TagManager extends EnvLoader {
     }
 
     def ShowTagInfo(): Unit = {
-      println(s"===================================================================" +
-        s"\n[Info] Tag Dictionary loading finished." +
-        s"\nTotal Tags:${tagInstReg.getNumsOfTags}" +
-        s"\nTotal Tables:${tagMesReg.getNumsOfTables}\n")
+      log.info(s"Tag Dictionary loading finished." +
+        s" Total Tags:${tagInstReg.getNumsOfTags}, Total Tables:${tagMesReg.getNumsOfTables}\n")
+//      log.info(s"===================================================================" +
+//        s"\nTag Dictionary loading finished." +
+//        s"\nTotal Tags:${tagInstReg.getNumsOfTags}" +
+//        s"\nTotal Tables:${tagMesReg.getNumsOfTables}\n")
     }
   }
 
 }
 
-class TagManager extends PersistentActor with ActorLogging {
+class TagManager extends PersistentActor with CalendarConverter {
   import TagManager._
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   override def preStart(): Unit = {
-    println(s"[Info] ${self}: TagManager is [Start].")
+    context.system.scheduler.schedule(0 seconds, 1 seconds, self, Cmd(TimeChecker(etlTime)))
+    log.info(s"TagManager is [Start].")
   }
 
   override def postStop(): Unit = {
-    println(s"[Info] ${self}: TagManager is [Stop].")
+    log.info(s"TagManager is [Stop].")
   }
 
   var state: State = State(TIsRegistry(), TMsRegistry())
@@ -283,13 +296,12 @@ class TagManager extends PersistentActor with ActorLogging {
 
   def createAndSend(ti: TagInstance, tagMessage: TagMessage) = {
     implicit val timeout = Timeout(5 seconds)
-    import scala.concurrent.ExecutionContext.Implicits.global
     val actorRef = context.actorOf(Props(new TagState(ti.frequency, ti.id)) ,name = ti.id)
     (actorRef ? Requirement(state.getTMs(ti))).map{
       case true =>
         actorRef ! Receipt(tagMessage)
       case false =>
-        println("Initial require messages error.")
+        log.error(s"Update error when Actor[${ti.id}] receive require messages.")
     }
     persist(Evt(TagInsActorCreated(ti, actorRef))) { evt =>
       updateState(evt)
@@ -299,14 +311,14 @@ class TagManager extends PersistentActor with ActorLogging {
   // Persistent receive on recovery mood
   val receiveRecover: Receive = {
     case evt: Evt =>
-      println(s"Counter receive $evt on recovering mood")
+      log.info(s"TagManager receive $evt on recovering mood")
       updateState(evt)
     case SnapshotOffer(_, snapshot: State) =>
-      println(s"Counter receive snapshot with data: $snapshot on recovering mood")
+      log.info(s"TagManager receive snapshot with data: $snapshot on recovering mood")
       state = snapshot
     case RecoveryCompleted =>
       state = state.initActors(createActor)
-      println(s"Recovery Complete and Now I'll swtich to receiving mode :)")
+      log.info(s"Recovery Complete and Now TagManager swtich to receiving mode :)")
 
   }
 
@@ -326,7 +338,7 @@ class TagManager extends PersistentActor with ActorLogging {
           }
         }
       } else{
-        println(s"tagID: ${tagDic.actorID} is already exist.")
+        log.warn(s"tagID: ${tagDic.actorID} is already exist.")
       }
 
     case cmd @ Cmd(StopTag(id)) =>
@@ -349,6 +361,17 @@ class TagManager extends PersistentActor with ActorLogging {
         ti.get.actor.get ! Requirement(tagMessages)
       }
 
+    case cmd @ Cmd(TimeChecker(time)) =>
+      import java.util.Calendar
+      val t = new SimpleDateFormat("HH:mm:ss").parse(time)
+      val c = Calendar.getInstance()
+      c.setTime(t)
+      c.add(Calendar.MINUTE, -2)
+      val nt = new SimpleDateFormat("HH:mm:ss").format(c.getTime)
+      if (new SimpleDateFormat("HH:mm:ss").format(getCalendar.getTime).compareTo(nt) == 0) {
+        self ! Cmd(GetTagStatus)
+      }
+
     case tagMessage: TagMessage  =>
       val message = tagMessage.getDefaultTM
       if (state.contains(message)) {
@@ -358,6 +381,15 @@ class TagManager extends PersistentActor with ActorLogging {
         }
       }
 
+    case Cmd(GetTagStatus) =>
+      implicit val timeout = Timeout(15 seconds)
+      import scala.concurrent.ExecutionContext.Implicits.global
+      val futureList = Future.traverse(state.getAvailableActors) { ar =>
+        (ar ? GetStatus).mapTo[TagMetadata]
+      }.map { list =>
+        list.foreach(num => println(s"$num"))
+      }
+
     case Cmd(ShowState) =>
       state.ShowTagInfo()
 //      println(s"The Current state of counter is $state")
@@ -365,7 +397,7 @@ class TagManager extends PersistentActor with ActorLogging {
     case SaveSnapshotSuccess(metadata) =>
 //      println(s"save snapshot succeed.")
     case SaveSnapshotFailure(metadata, reason) =>
-      println(s"save snapshot failed and failure is $reason")
+      log.error(s"save snapshot failed and failure is $reason")
 
   }
 

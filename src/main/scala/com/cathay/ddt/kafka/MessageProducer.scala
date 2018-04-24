@@ -9,12 +9,15 @@ import spray.json._
 import TagJsonProtocol._
 import com.cathay.ddt.ats.TagState.{Daily, FrequencyType, Monthly}
 import org.apache.kafka.clients.producer.RecordMetadata
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
 
 class MessageProducer extends CalendarConverter {
-  private val kafkaConfig: Config = getConfig("kafka")
 
+  val log = LoggerFactory.getLogger(this.getClass)
+
+  private val kafkaConfig: Config = getConfig("kafka")
   private val producerConfig = kafkaConfig.getConfig("kafka.producer")
   private val publishTopic = kafkaConfig.getString("tag.publish-topic")
   private val tagName = kafkaConfig.getString("tag.name")
@@ -26,7 +29,7 @@ class MessageProducer extends CalendarConverter {
     ).withConf(producerConfig)
   )
 
-  def sendToFinishTopic(frequency: FrequencyType, ctd: ComposeTD): Future[RecordMetadata] = {
+  def sendToFinishTopic(frequency: FrequencyType, ctd: ComposeTD): Unit = {
     frequency match {
       case Daily =>
         val fMessage = TagFinishMessage(tagName, ctd.tag_name, ctd.update_frequency, None, Option(getDailyDate), ctd.actorID, getCalendar.getTimeInMillis, is_success = true)
@@ -37,6 +40,7 @@ class MessageProducer extends CalendarConverter {
         val record = KafkaProducerRecord(publishTopic, Some("tagKey"), s"${fMessage.toJson.prettyPrint}")
         producer.send(record)
     }
+    log.info(s"Tag($frequency) ID[${ctd.actorID}] is producing finish topic.")
   }
 
 }

@@ -1,4 +1,4 @@
-package com.cathay.ddt.app
+package com.cathay.ddt.app.test
 
 import com.cathay.ddt.utils.YarnMetricsChecker
 object YarnTest extends App {

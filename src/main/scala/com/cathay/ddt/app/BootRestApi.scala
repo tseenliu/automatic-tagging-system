@@ -1,11 +1,12 @@
-package com.cathay.ddt.api
+package com.cathay.ddt.app
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import akka.http.scaladsl.Http
+import akka.stream.ActorMaterializer
+import com.cathay.ddt.api.ApiRoute
 import com.cathay.ddt.utils.EnvLoader
 
-object RestApi extends App with ApiRoute with EnvLoader {
+object BootRestApi extends App with ApiRoute with EnvLoader {
 
   val config = getConfig("api")
   val host = config.getString("api.host")

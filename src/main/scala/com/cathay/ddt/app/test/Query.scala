@@ -1,4 +1,4 @@
-package com.cathay.ddt.db.example
+package com.cathay.ddt.app.test
 
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import com.cathay.ddt.tagging.schema.TagType

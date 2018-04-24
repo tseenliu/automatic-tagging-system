@@ -9,17 +9,20 @@ import org.apache.kafka.common.serialization.StringDeserializer
 import spray.json._
 import TagJsonProtocol._
 import com.cathay.ddt.utils.{EnvLoader, MessageConverter}
+import org.slf4j.LoggerFactory
 
 /**
   * Created by Tse-En on 2017/12/23.
   */
-class MessageConsumer extends Actor with ActorLogging with EnvLoader {
+class MessageConsumer extends Actor with EnvLoader {
+
+  val log = LoggerFactory.getLogger(this.getClass)
   override def preStart(): Unit = {
-    println(s"[Info] ${self}: MessageConsumer is [Start].")
+    log.info(s"MessageConsumer is [Start].")
   }
 
   override def postStop(): Unit = {
-    println(s"[Info] ${self}: MessageConsumer is [Stop].")
+    log.info(s"MessageConsumer is [Stop].")
   }
 
   private val kafkaConfig: Config = getConfig("kafka")
@@ -44,7 +47,7 @@ class MessageConsumer extends Actor with ActorLogging with EnvLoader {
   context.watch(consumer)
 
   override def receive: Receive = {
-    case Terminated(watchActor) => println(s"[ERROR] ${watchActor.path} to be killed.")
+    case Terminated(watchActor) => log.error(s"${watchActor.path} to be killed.")
 
     // Records from Kafka
     case recordsExt(records) =>
@@ -59,12 +62,12 @@ class MessageConsumer extends Actor with ActorLogging with EnvLoader {
         // Parse records in Json format
         r.topic() match {
           case m if frontier.contains(m) =>
-            println(s"[Info] MessageConsumer is received: ${r.value()} from [$m] topic.")
+            log.info(s"MessageConsumer is received: ${r.value()} from [$m] topic.")
             val message: FrontierMessage = r.value().parseJson.convertTo[FrontierMessage]
             val tagMessage = MessageConverter.CovertToTM(r.topic(), message)
             context.parent ! tagMessage
           case m if m == publishTopic =>
-            println(s"[Info] MessageConsumer is received: ${r.value()} from [$m] topic.")
+            log.info(s"MessageConsumer is received: ${r.value()} from [$m] topic.")
             val message: TagFinishMessage = r.value().parseJson.convertTo[TagFinishMessage]
             val tagMessage = MessageConverter.CovertToTM(r.topic(), message)
             context.parent ! message

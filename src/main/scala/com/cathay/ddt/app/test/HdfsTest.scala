@@ -1,8 +1,6 @@
-package com.cathay.ddt.app
+package com.cathay.ddt.app.test
 
-import com.cathay.ddt.tagging.protocal.QueryTDProtocol
 import com.cathay.ddt.tagging.schema.{ComposeTD, QueryTD, TagDictionary, TagType}
-import com.cathay.ddt.utils.{HdfsClient, ViewMapper}
 import spray.json._
 
 object HdfsTest extends App {

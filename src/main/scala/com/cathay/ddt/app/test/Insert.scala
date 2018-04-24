@@ -1,11 +1,7 @@
-package com.cathay.ddt.db.example
+package com.cathay.ddt.app.test
 
-import com.cathay.ddt.db.{MongoConnector, MongoUtils}
+import com.cathay.ddt.db.MongoConnector
 import com.cathay.ddt.tagging.schema.{TagDictionary, TagType}
-import reactivemongo.bson.{BSONDocument, BSONObjectID}
-
-import scala.concurrent.ExecutionContext.Implicits.global
-import spray.json._
 
 /**
   * Created by Tse-En on 2017/12/12.

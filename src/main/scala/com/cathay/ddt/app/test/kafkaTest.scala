@@ -1,17 +1,20 @@
-package com.cathay.ddt.app
+package com.cathay.ddt.app.test
 
 import akka.actor.{ActorSystem, Props}
-import com.cathay.ddt.ats.TagScheduler
-import com.cathay.ddt.ats.TagScheduler._
-import com.cathay.ddt.tagging.schema.TagDictionary
+import com.cathay.ddt.kafka.MessageConsumer
+import com.cathay.ddt.utils.EnvLoader
 
 /**
-  * Created by Tse-En on 2018/1/29.
+  * Created by Tse-En on 2017/12/26.
   */
-object JobSchedulerTest extends App {
+object kafkaTest extends App with EnvLoader {
 
-  // testing
-//  val tag = TagDictionary(
+  //consumer
+  val system = ActorSystem("frontier")
+  val kafkaActor = system.actorOf(Props(new MessageConsumer), "kafka-test")
+
+
+//  val dic = TagDictionary(
 //    tag_id = "asfsdregfgdsgsdfgdsgert1345353454363redfsf34g",
 //    channel_type = "bank",
 //    channel_item = "信用卡/簽帳卡",
@@ -32,41 +35,19 @@ object JobSchedulerTest extends App {
 //            |AND concat(substr('''$end_date''',1,4),substr('''$end_date''',6,2))
 //          """.stripMargin.trim,
 //    update_frequency = "M",
-//    started = Option(-3),
-//    traced = Option(3),
+//    started = Option(-6),
+//    traced = Option(6),
 //    description = "超市購買族群",
+//    disable_flag = Option(false),
 //    create_time = "2018-03-12",
 //    update_time = "2018-03-12",
-//    disable_flag = Option(false),
 //    score_method = "C",
 //    attribute = "behavior",
 //    creator = "Jenny",
 //    is_focus = true)
 //
-//  val scheduleInstance1 = ScheduleInstance("select * from alex", tag)
-//  val scheduleInstance2 = ScheduleInstance("select * from jenny", tag)
-//  val scheduleInstance3 = ScheduleInstance("select * from katherine", tag)
-//
-//
-//
-//  val system = ActorSystem("Round-Robin-Router")
-//  val jobs = system.actorOf(Props[TagScheduler], "tag-scheduler")
-//  jobs ! Create
-//  jobs ! Schedule(scheduleInstance1)
-//  Thread.sleep(13000)
-//  jobs ! Schedule(scheduleInstance2)
-//  Thread.sleep(8000)
-//  jobs ! Schedule(scheduleInstance3)
-//  Thread.sleep(8000)
-
-
-//  jobs ! KILL
-//  Thread.sleep(3000)
-
-
-
-
-
-//  Thread.sleep(10000)
-//  system.terminate()
+//  //producer
+//  MessageProducer.getProducer.sendToFinishTopic(Monthly, dic)
+//  Thread.sleep(5000)
+//  MessageProducer.getProducer.sendToFinishTopic(Daily, dic)
 }

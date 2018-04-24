@@ -3,6 +3,7 @@ package com.cathay.ddt.utils
 import com.cathay.ddt.kafka.{FrontierMessage, TagFinishMessage}
 import com.cathay.ddt.tagging.schema.TagMessage.{Message, SimpleTagMessage}
 import com.cathay.ddt.tagging.schema.{TagDictionary, TagMessage}
+import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
@@ -15,6 +16,8 @@ object MessageConverter extends CalendarConverter {
 
   // local load
   val mappingFilePath = getConfig("ats").getString("ats.hive.local-path")
+
+  val log = LoggerFactory.getLogger(this.getClass)
 
   var sqlMList = new ListBuffer[(String, Message)]()
   var kafkaMList = new ListBuffer[(String, String)]()
@@ -120,8 +123,8 @@ object MessageConverter extends CalendarConverter {
       try {
         set += map(table)
       }catch {
-        case keyNotFound: NoSuchElementException => println(s"[ERROR] view table $table: $keyNotFound")
-        case _: Throwable => println("Got some other kind of exception")
+        case keyNotFound: NoSuchElementException => log.error(s"view table $table: $keyNotFound")
+        case e: Throwable => log.error(s"${e.getMessage}")
       }
     }
     set.toIterator
@@ -129,8 +132,8 @@ object MessageConverter extends CalendarConverter {
 
   def getSqlMTable: Map[String, Message] = {
     if (sqlMTable.isEmpty) {
-//      initialADW()
-      initialFromLocal()
+      initialADW()
+//      initialFromLocal()
       sqlMTable
     } else {
       sqlMTable
@@ -139,8 +142,8 @@ object MessageConverter extends CalendarConverter {
 
   def getKafkaMTable: Map[String, String] = {
     if (kafkaMTable.isEmpty) {
-//      initialADW()
-      initialFromLocal()
+      initialADW()
+//      initialFromLocal()
       kafkaMTable
     } else {
       kafkaMTable

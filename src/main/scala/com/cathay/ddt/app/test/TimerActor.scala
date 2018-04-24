@@ -1,4 +1,4 @@
-package com.cathay.ddt.app
+package com.cathay.ddt.app.test
 
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -6,8 +6,6 @@ import java.util.Calendar
 import akka.actor.Actor
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
 import scala.concurrent.duration._
 
 /**

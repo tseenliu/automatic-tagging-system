@@ -4,7 +4,7 @@
         <!-- encoders are assigned the type
              ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
 
@@ -12,27 +12,29 @@
         <Encoding>UTF-8</Encoding>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <FileNamePattern>${PWD}/logs/log.%d{yyyy-MM-dd}.log</FileNamePattern>
-            <MaxHistory>3</MaxHistory>
+            <MaxHistory>7</MaxHistory>
             <CleanHistoryOnStart>true</CleanHistoryOnStart>
         </rollingPolicy>
         <layout class="ch.qos.logback.classic.PatternLayout">
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </layout>
-        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
-            <MaxFileSize>10MB</MaxFileSize>
-        </triggeringPolicy>
+        <!--<triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">-->
+            <!--<MaxFileSize>10MB</MaxFileSize>-->
+        <!--</triggeringPolicy>-->
     </appender>
 
-    <root level="error">
-        <appender-ref ref="STDOUT" />
+    <root level="info">
         <appender-ref ref="FILE" />
+        <!--<appender-ref ref="STDOUT" />-->
     </root>
 
-    <logger name="org.mongodb.driver" level="INFO"/>
-    <logger name="reactivemongo.core.actors" level="INFO"/>
-    <logger name="reactivemongo.core.nodeset" level="INFO"/>
-    <logger name="reactivemongo.api.MongoConnection" level="INFO"/>
-    <logger name="io.swagger" level="INFO"/>
-    <logger name="ch.qos.logback" level="INFO"/>
+    <logger name="org.mongodb.driver" level="ERROR"/>
+    <logger name="reactivemongo.core.actors" level="ERROR"/>
+    <logger name="reactivemongo.core.nodeset" level="ERROR"/>
+    <logger name="reactivemongo.api.MongoConnection" level="ERROR"/>
+    <logger name="io.swagger" level="ERROR"/>
+    <logger name="ch.qos.logback" level="ERROR"/>
+
+    <logger name="o.a.k.c.consumer.ConsumerConfig" level="ERROR" additivity="true" />
 
 </configuration>
