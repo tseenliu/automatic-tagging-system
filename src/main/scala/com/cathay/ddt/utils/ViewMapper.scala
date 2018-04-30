@@ -20,7 +20,7 @@ class ViewMapper {
     val ParsingSQLCommand: String = {
       s"""
          |select
-         |view_id, db_id, table_id, year_ind, month_ind, day_ind, ref_ind
+         |view_id, db_id, table_id, year_ind, month_ind, day_ind, ref_ind, partition_id
          |from $VIEW_TABLE
         """.stripMargin
       }
@@ -39,20 +39,18 @@ class ViewMapper {
         val month = res.getString(5)
         val day = res.getString(6)
         val ref = res.getString(7)
+        val partition = res.getString(8)
 
-        if(ref == "v") addItem("D", view, s"$db.$table")
-        else if (month == "v" && day == "v") addItem("D", view, s"$db.$table")
-        else if(month == "v") addItem("M", view, s"$db.$table")
-        else if(day == "v") addItem("D", view, s"$db.$table")
-//        else if(year == "v") addItem("Y", view, s"$db.$table")
-//        else addItem("D", view, s"$db.$table")
-      //}
+        if(ref == "v") addItem("D", view, s"$db.$table", partition)
+        else if (month == "v" && day == "v") addItem("D", view, s"$db.$table", partition)
+        else if(month == "v") addItem("M", view, s"$db.$table", partition)
+        else if(day == "v") addItem("D", view, s"$db.$table", partition)
     }
   }
 
-  def addItem(frequency: String, view: String, dbTable: String) {
+  def addItem(frequency: String, view: String, dbTable: String, partition: String) {
     kafkaMList += ((dbTable, frequency))
-    sqlMList += ((view, SimpleTagMessage(frequency, dbTable)))
+    sqlMList += ((view, SimpleTagMessage(frequency, dbTable, partition)))
   }
 
   def getKafkaMList: ListBuffer[(String, String)] = kafkaMList

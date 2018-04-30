@@ -10,7 +10,7 @@ import com.cathay.ddt.ats.TagManager.{Cmd, StopTag}
 import com.cathay.ddt.ats.TagScheduler.{Schedule, ScheduleInstance}
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import com.cathay.ddt.kafka.MessageProducer
-import com.cathay.ddt.tagging.schema.{ComposeTD, Dictionary, TagDictionary, TagMessage}
+import com.cathay.ddt.tagging.schema._
 import com.cathay.ddt.tagging.schema.TagMessage.{Message, SimpleTagMessage}
 import com.cathay.ddt.utils.CalendarConverter
 import org.slf4j.LoggerFactory
@@ -48,8 +48,9 @@ object TagState {
 
   // Tag Data
   sealed trait Data {
-    val daily: Map[String, Boolean]
-    val monthly: Map[String, Boolean]
+    val requiredMessages: Set[RequiredMessage]
+    val daily: Map[TagMessage, Boolean]
+    val monthly: Map[TagMessage, Boolean]
     def isNull: Boolean = daily.isEmpty & monthly.isEmpty
     def isReady: Boolean = {
       val d =
@@ -77,11 +78,14 @@ object TagState {
   }
 
   case object ZeroMetadata extends Data {
-    override val daily: Map[String, Boolean] = Map()
-    override val monthly: Map[String, Boolean] = Map()
+    override val requiredMessages: Set[RequiredMessage] = Set()
+    override val daily: Map[TagMessage, Boolean] = Map()
+    override val monthly: Map[TagMessage, Boolean] = Map()
   }
 
-  case class Metadata(override val daily: Map[String, Boolean], override val monthly: Map[String, Boolean]) extends Data {
+  case class Metadata(override val requiredMessages: Set[RequiredMessage],
+                      override val daily: Map[TagMessage, Boolean],
+                      override val monthly: Map[TagMessage, Boolean]) extends Data {
     var monthlyAlreadyRun: Option[String] = None
     override def toString: String = {
       s"===================================================================" +
@@ -156,14 +160,14 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
 
   override def applyEvent(evt: DomainEvent, currentData: Data): Data = {
 
-    def resetDaily: Map[String, Boolean] = {
-      val daily = collection.mutable.Map[String, Boolean]()
+    def resetDaily: Map[TagMessage, Boolean] = {
+      val daily = collection.mutable.Map[TagMessage, Boolean]()
       currentData.daily.keys.foreach( k=> daily += (k -> false) )
       daily.toMap
     }
 
-    def resetMonthly: Map[String, Boolean] = {
-      val monthly = collection.mutable.Map[String, Boolean]()
+    def resetMonthly: Map[TagMessage, Boolean] = {
+      val monthly = collection.mutable.Map[TagMessage, Boolean]()
       currentData.monthly.keys.foreach( k => monthly += (k -> false) )
       monthly.toMap
     }

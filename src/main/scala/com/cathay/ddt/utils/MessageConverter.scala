@@ -46,64 +46,40 @@ object MessageConverter extends CalendarConverter {
     val frequency = getKafkaMTable(value)
     frequency.toUpperCase() match {
       case "M" =>
-        TagMessage(
-          topic,
-          frequency.toUpperCase(),
-          value,
-          Some(input.partition_values.head),
-          None,
-          input.exec_date)
+        TagMessage(topic, frequency.toUpperCase(), value, input.partition_values.head, input.partition_values.head, input.exec_date)
       case "D" =>
         if(input.partition_fields.contains("yyyymm")
           && !input.partition_values.isEmpty) {
-          TagMessage(
-            topic,
-            frequency.toUpperCase(),
-            value,
-            None,
-            Some(getRealDate(input.partition_values.head)),
-            input.exec_date)
+          TagMessage(topic, frequency.toUpperCase(), value, "yyyymmdd", getRealDate(input.partition_values.head), input.exec_date)
         }else {
-          TagMessage(
-            topic,
-            frequency.toUpperCase(),
-            value,
-            None,
-            None,
-            input.exec_date)
+          TagMessage(topic, frequency.toUpperCase(), value, null, null, input.exec_date)
         }
-      case "Y" =>
-        TagMessage(
-          topic,
-          frequency.toUpperCase(),
-          value,
-          None,
-          None,
-          input.exec_date)
+//      case "Y" =>
+//        TagMessage(topic, frequency.toUpperCase(), value, "yyyy", input.partition_values.head, input.exec_date)
     }
   }
 
-  def CovertToTM(topic: String, input: TagFinishMessage): TagMessage = {
-    input.update_frequency.toUpperCase() match {
-      case "M" =>
-        TagMessage(
-          topic,
-          input.update_frequency.toUpperCase(),
-          input.tag_id,
-          Some(input.yyyymm.getOrElse("")),
-          None,
-          input.finish_time)
-      case "D" =>
-        TagMessage(
-          topic,
-          input.update_frequency.toUpperCase(),
-          input.tag_id,
-          None,
-          Some(input.yyyymmdd.getOrElse("")),
-          input.finish_time)
-    }
-
-  }
+//  def CovertToTM(topic: String, input: TagFinishMessage): TagMessage = {
+//    input.update_frequency.toUpperCase() match {
+//      case "M" =>
+//        TagMessage(
+//          topic,
+//          input.update_frequency.toUpperCase(),
+//          input.tag_id,
+//          Some(input.yyyymm.getOrElse("")),
+//          None,
+//          input.finish_time)
+//      case "D" =>
+//        TagMessage(
+//          topic,
+//          input.update_frequency.toUpperCase(),
+//          input.tag_id,
+//          None,
+//          Some(input.yyyymmdd.getOrElse("")),
+//          input.finish_time)
+//    }
+//
+//  }
 
 
   // parsing sql and get require value
@@ -172,17 +148,5 @@ object MessageConverter extends CalendarConverter {
     sqlMTable = ViewMapper.getViewMapper.getSqlMList.toMap
     kafkaMTable = ViewMapper.getViewMapper.getKafkaMList.toMap
   }
-
-  def printSql(): Unit = {
-    val m = getSqlMTable
-    m.foreach(println(_))
-  }
-
-  def printKafka(): Unit = {
-    val m = getKafkaMTable
-    m.foreach(println(_))
-  }
-
-
 
 }

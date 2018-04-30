@@ -69,7 +69,7 @@ class MessageConsumer extends Actor with EnvLoader {
           case m if m == publishTopic =>
             log.info(s"MessageConsumer is received: ${r.value()} from [$m] topic.")
             val message: TagFinishMessage = r.value().parseJson.convertTo[TagFinishMessage]
-            val tagMessage = MessageConverter.CovertToTM(r.topic(), message)
+//            val tagMessage = MessageConverter.CovertToTM(r.topic(), message)
             context.parent ! message
         }
       } catch {
