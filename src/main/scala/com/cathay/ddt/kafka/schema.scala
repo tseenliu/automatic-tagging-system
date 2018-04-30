@@ -19,9 +19,10 @@ case class FrontierMessage(table: String,
 
 case class TagFinishMessage(hippo_name: String,  //batchetl.tagging
                             job_name: String,    //超市購物
+                           //job_id: String,     //tag_id_timestamp(10)
                             update_frequency: String,
-                            yyyymm: Option[String],  // t-1
-                            yyyymmdd: Option[String],  // t-2
+                            yyyymm: Option[String],  // execute time
+                            yyyymmdd: Option[String],  // execute time
                             tag_id: String,     //id
                             finish_time: Long,
                             is_success: Boolean)

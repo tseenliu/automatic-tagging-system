@@ -387,7 +387,8 @@ class TagManager extends PersistentActor with CalendarConverter {
       val futureList = Future.traverse(state.getAvailableActors) { ar =>
         (ar ? GetStatus).mapTo[TagMetadata]
       }.map { list =>
-        list.foreach(num => println(s"$num"))
+        log.warn(s"Not Finish Tags:")
+        list.foreach(num => log.warn(s"$num"))
       }
 
     case Cmd(ShowState) =>
