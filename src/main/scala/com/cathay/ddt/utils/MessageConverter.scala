@@ -46,14 +46,18 @@ object MessageConverter extends CalendarConverter {
     val frequency = getKafkaMTable(value)
     frequency.toUpperCase() match {
       case "M" =>
-        TagMessage(topic, frequency.toUpperCase(), value, input.partition_values.head, input.partition_values.head, input.exec_date)
+        TagMessage(Some(topic), frequency.toUpperCase(), value, Some(input.partition_fields.head), Some(input.partition_values.head), Some(input.exec_date))
       case "D" =>
-        if(input.partition_fields.contains("yyyymm")
-          && !input.partition_values.isEmpty) {
-          TagMessage(topic, frequency.toUpperCase(), value, "yyyymmdd", getRealDate(input.partition_values.head), input.exec_date)
-        }else {
-          TagMessage(topic, frequency.toUpperCase(), value, null, null, input.exec_date)
-        }
+        if(!input.partition_fields.contains("")
+          && !input.partition_values.contains("")) {
+          TagMessage(Some(topic), frequency.toUpperCase(), value, Some(input.partition_fields.head), Some(getRealDate(input.partition_values.head)), Some(input.exec_date))
+        } else TagMessage(Some(topic), frequency.toUpperCase(), value, None, None, Some(input.exec_date))
+//        if(input.partition_fields.contains("yyyymm")
+//          && !input.partition_values.isEmpty) {
+//          TagMessage(topic, frequency.toUpperCase(), value, "yyyymmdd", getRealDate(input.partition_values.head), input.exec_date)
+//        }else {
+//          TagMessage(topic, frequency.toUpperCase(), value, null, null, input.exec_date)
+//        }
 //      case "Y" =>
 //        TagMessage(topic, frequency.toUpperCase(), value, "yyyy", input.partition_values.head, input.exec_date)
     }
@@ -108,8 +112,8 @@ object MessageConverter extends CalendarConverter {
 
   def getSqlMTable: Map[String, Message] = {
     if (sqlMTable.isEmpty) {
-      initialADW()
-//      initialFromLocal()
+//      initialADW()
+      initialFromLocal()
       sqlMTable
     } else {
       sqlMTable
@@ -118,8 +122,8 @@ object MessageConverter extends CalendarConverter {
 
   def getKafkaMTable: Map[String, String] = {
     if (kafkaMTable.isEmpty) {
-      initialADW()
-//      initialFromLocal()
+//      initialADW()
+      initialFromLocal()
       kafkaMTable
     } else {
       kafkaMTable

@@ -39,16 +39,16 @@ class ViewMapper {
         val month = res.getString(5)
         val day = res.getString(6)
         val ref = res.getString(7)
-        val partition = res.getString(8)
+        val partition = if(res.getString(8).isEmpty) None else Some(res.getString(8))
 
         if(ref == "v") addItem("D", view, s"$db.$table", partition)
-        else if (month == "v" && day == "v") addItem("D", view, s"$db.$table", partition)
+        else if (month == "v" && day == "v") addItem("D", view, s"$db.$table", Some("yyyymm"))
         else if(month == "v") addItem("M", view, s"$db.$table", partition)
         else if(day == "v") addItem("D", view, s"$db.$table", partition)
     }
   }
 
-  def addItem(frequency: String, view: String, dbTable: String, partition: String) {
+  def addItem(frequency: String, view: String, dbTable: String, partition: Option[String]) {
     kafkaMList += ((dbTable, frequency))
     sqlMList += ((view, SimpleTagMessage(frequency, dbTable, partition)))
   }

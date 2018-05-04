@@ -1,24 +1,56 @@
 package com.cathay.ddt.tagging.schema
 
+import com.cathay.ddt.kafka.TM2Show
+
 /**
   * Created by Tse-En on 2017/12/19.
   */
-case class RequiredMessage(kafkaTopic: String, update_frequency: String, value: String, partitioned: String)
-case class TagMessage(kafkaTopic: String,
+//case class RequiredMessage(kafkaTopic: String, update_frequency: String, value: String, partitioned: Option[String])
+case class TagMessage(kafkaTopic: Option[String],
                       update_frequency: String,
                       value: String,
-                      partition_fields: String="yyyymm",
-                      partition_values: String,
-                      finish_time: Long) {
-  import TagMessage._
-  def getDefaultTM: Message = {
-    TagMessage.SimpleTagMessage(update_frequency, value, partition_fields)
+                      partition_fields: Option[String]=Some("yyyymm"),
+                      partition_values: Option[String],
+                      finish_time: Option[Long]) {
+  import TagMessage.SimpleTagMessage
+  def getDefaultTM: SimpleTagMessage = {
+    SimpleTagMessage(update_frequency, value, partition_fields)
   }
 }
 
 object TagMessage {
   trait Message
-  case class SimpleTagMessage(update_frequency: String, value: String, partition_fields: String="yyyymm") extends Message
+  case class SimpleTagMessage(update_frequency: String, value: String, partition_fields: Option[String]=Some("yyyymm")) extends Message
+
+  implicit def convertTM(stm: SimpleTagMessage): TagMessage = {
+    TagMessage(
+      None,
+      stm.update_frequency,
+      stm.value,
+      stm.partition_fields,
+      None,
+      None
+    )
+  }
+
+  implicit def convertSTM(tm: TagMessage): SimpleTagMessage = {
+    SimpleTagMessage(
+      tm.update_frequency,
+      tm.value,
+      tm.partition_fields
+    )
+  }
+
+  implicit def convertTM2(tm: TagMessage): TM2Show = {
+    TM2Show(
+      tm.kafkaTopic,
+      tm.update_frequency,
+      tm.value,
+      tm.partition_fields,
+      tm.partition_values,
+      tm.finish_time
+    )
+  }
 }
 
 

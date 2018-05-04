@@ -22,17 +22,14 @@ class TagScheduler extends Actor with CalendarConverter {
 
   val log = LoggerFactory.getLogger(this.getClass)
   val ymChecker: YarnMetricsChecker = YarnMetricsChecker.getChecker
-//  var totalNumIns: Int = _
 
   override def preStart(): Unit = {
     log.info(s"TagScheduler is [Start].")
-//    totalNumIns = ymChecker.getYarnMetrics.get.getTotalInstance
     self ! Create(ymChecker.getYarnMetrics.get.getTotalInstance)
   }
 
   override def postStop(): Unit = {
     log.info(s"TagScheduler is [Stop].")
-//    println(s"[Info] ${self}: TagScheduler is [Stop].")
   }
 
   var instanceList = new ListBuffer[ScheduleInstance]()
@@ -67,10 +64,9 @@ class TagScheduler extends Actor with CalendarConverter {
     case Schedule(instance) =>
       import scala.concurrent.ExecutionContext.Implicits.global
       log.info(s"[Info] TagScheduler is received: Tag(${instance.composeTd.update_frequency}) ID[${instance.composeTd.actorID}]")
-//      println(s"[Info] TagScheduler is received: Tag(${instance.composeTd.update_frequency}) ID[${instance.composeTd.actorID}]")
 
       val tdJson = instance.composeTd.toJson
-      HdfsClient.getClient.write(fileName = s"${instance.composeTd.tag_id}_${getCurrentDate}", data = tdJson.compactPrint.getBytes)
+      HdfsClient.getClient.write(fileName = s"${instance.composeTd.tag_id}_$getCurrentDate", data = tdJson.compactPrint.getBytes)
       instanceList += instance
 
       if(cancellable.isDefined) {
@@ -84,19 +80,12 @@ class TagScheduler extends Actor with CalendarConverter {
     case RunInstances =>
       schedulerPoolRun()
 
-    case NonFinishInstance(frequencyType, instance) =>
-      context.actorSelection(s"/user/tag-manager/${instance.composeTd.actorID}") ! Report(success = false, frequencyType, instance.composeTd)
+    case NonFinishInstance(startTime, frequencyType, instance) =>
+      context.actorSelection(s"/user/tag-manager/${instance.composeTd.actorID}") ! Report(startTime, success = false, frequencyType, instance.composeTd)
 
-    case FinishInstance(frequencyType, instance) =>
-//      instanceList -= instance
-//      totalNumIns += 1
-
-      HdfsClient.getClient.delete(fileName = s"${instance.composeTd.tag_id}_${getCurrentDate}")
-      context.actorSelection(s"/user/tag-manager/${instance.composeTd.actorID}") ! Report(success = true, frequencyType, instance.composeTd)
-
-//      if(instanceList.nonEmpty) {
-//        self ! RunInstances
-//      }
+    case FinishInstance(startTime, frequencyType, instance) =>
+      HdfsClient.getClient.delete(fileName = s"${instance.composeTd.tag_id}_$getCurrentDate")
+      context.actorSelection(s"/user/tag-manager/${instance.composeTd.actorID}") ! Report(startTime, success = true, frequencyType, instance.composeTd)
   }
 }
 
@@ -104,7 +93,7 @@ object TagScheduler {
   case class ScheduleInstance(composeTd: ComposeTD)
   case class Schedule(instance: ScheduleInstance)
   case object RunInstances
-  case class FinishInstance(frequencyType: FrequencyType, instance: ScheduleInstance)
-  case class NonFinishInstance(frequencyType: FrequencyType, instance: ScheduleInstance)
+  case class FinishInstance(startTime:Long, frequencyType: FrequencyType, instance: ScheduleInstance)
+  case class NonFinishInstance(startTime:Long, frequencyType: FrequencyType, instance: ScheduleInstance)
   case class Create(availableInstance: Int)
 }

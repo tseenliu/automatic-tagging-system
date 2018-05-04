@@ -26,8 +26,9 @@ class TaggingRunner extends Actor with CalendarConverter{
 
   override def receive: Receive = {
     case msg: Run =>
+      val startTime = getCalendar.getTimeInMillis/1000
       log.info(s"ActorRef: ${self} received Message by TagScheduler.")
-      val command = Seq("/bin/bash", s"$runPath", "--job-name", s"${msg.instance.composeTd.tag_id}", "-p", s"$TMP_FILE_PATH${msg.instance.composeTd.tag_id}_${getCurrentDate}")
+      val command = Seq("/bin/bash", s"$runPath", "--job-name", s"${msg.instance.composeTd.tag_id}", "-p", s"$TMP_FILE_PATH${msg.instance.composeTd.tag_id}_$getCurrentDate")
 
       val execute = command !
 
@@ -35,20 +36,14 @@ class TaggingRunner extends Actor with CalendarConverter{
       if(execute == 0) {
         log.info(s"TagID[${msg.instance.composeTd.tag_id}] exit code: $execute")
         frequencyType match {
-          case "M" =>
-            context.parent ! FinishInstance(Monthly, msg.instance)
-//            context.actorSelection(s"/user/tag-manager/${msg.instance.composeTd.actorID}") ! Report(success = true, Monthly, msg.instance.composeTd)
-          case "D" =>
-            context.parent ! FinishInstance(Daily, msg.instance)
-//            context.actorSelection(s"/user/tag-manager/${msg.instance.composeTd.actorID}") ! Report(success = true, Daily, msg.instance.composeTd)
+          case "M" => context.parent ! FinishInstance(startTime, Monthly, msg.instance)
+          case "D" => context.parent ! FinishInstance(startTime, Daily, msg.instance)
         }
       }else {
         log.error(s"TagID[${msg.instance.composeTd.tag_id}] exit code: $execute")
         frequencyType match {
-          case "M" =>  context.parent ! NonFinishInstance(Monthly, msg.instance)
-            //context.actorSelection(s"/user/tag-manager/${msg.instance.composeTd.actorID}") ! Report(success = false, Monthly, msg.instance.composeTd)
-          case "D" => context.parent ! NonFinishInstance(Daily, msg.instance)
-            //context.actorSelection(s"/user/tag-manager/${msg.instance.composeTd.actorID}") ! Report(success = false, Daily, msg.instance.composeTd)
+          case "M" => context.parent ! NonFinishInstance(startTime, Monthly, msg.instance)
+          case "D" => context.parent ! NonFinishInstance(startTime, Daily, msg.instance)
         }
       }
   }

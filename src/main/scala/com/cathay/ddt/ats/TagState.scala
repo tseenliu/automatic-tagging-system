@@ -11,7 +11,7 @@ import com.cathay.ddt.ats.TagScheduler.{Schedule, ScheduleInstance}
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import com.cathay.ddt.kafka.MessageProducer
 import com.cathay.ddt.tagging.schema._
-import com.cathay.ddt.tagging.schema.TagMessage.{Message, SimpleTagMessage}
+import com.cathay.ddt.tagging.schema.TagMessage._
 import com.cathay.ddt.utils.CalendarConverter
 import org.slf4j.LoggerFactory
 import reactivemongo.bson.BSONDocument
@@ -48,7 +48,7 @@ object TagState {
 
   // Tag Data
   sealed trait Data {
-    val requiredMessages: Set[RequiredMessage]
+    val requiredMessages: Set[SimpleTagMessage]
     val daily: Map[TagMessage, Boolean]
     val monthly: Map[TagMessage, Boolean]
     def isNull: Boolean = daily.isEmpty & monthly.isEmpty
@@ -78,18 +78,18 @@ object TagState {
   }
 
   case object ZeroMetadata extends Data {
-    override val requiredMessages: Set[RequiredMessage] = Set()
+    override val requiredMessages: Set[SimpleTagMessage] = Set()
     override val daily: Map[TagMessage, Boolean] = Map()
     override val monthly: Map[TagMessage, Boolean] = Map()
   }
 
-  case class Metadata(override val requiredMessages: Set[RequiredMessage],
+  case class Metadata(override val requiredMessages: Set[SimpleTagMessage],
                       override val daily: Map[TagMessage, Boolean],
                       override val monthly: Map[TagMessage, Boolean]) extends Data {
     var monthlyAlreadyRun: Option[String] = None
     override def toString: String = {
       s"===================================================================" +
-        s"\nDaily: $daily\nMonthly[${monthlyAlreadyRun.getOrElse("None")}]: $monthly\n"
+        s"\nRequired: $requiredMessages\nDaily: $daily\nMonthly[${monthlyAlreadyRun.getOrElse("None")}]: $monthly\n"
     }
   }
 
@@ -128,7 +128,7 @@ object TagState {
   case class Receipt(tagMessage: TagMessage)
   case object Check
   case object Launch
-  case class Report(success: Boolean, frequencyType: FrequencyType, dic: ComposeTD)
+  case class Report(startTime:Long, success: Boolean, frequencyType: FrequencyType, dic: ComposeTD)
   case object Stop
   case object GetStatus
   case object RevivalCheck
@@ -162,62 +162,75 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
 
     def resetDaily: Map[TagMessage, Boolean] = {
       val daily = collection.mutable.Map[TagMessage, Boolean]()
-      currentData.daily.keys.foreach( k=> daily += (k -> false) )
+      currentData.daily.keys.foreach( k=> daily += (convertTM(convertSTM(k)) -> false) )
       daily.toMap
     }
 
     def resetMonthly: Map[TagMessage, Boolean] = {
       val monthly = collection.mutable.Map[TagMessage, Boolean]()
-      currentData.monthly.keys.foreach( k => monthly += (k -> false) )
+      currentData.monthly.keys.foreach( k => monthly += (convertTM(convertSTM(k)) -> false) )
       monthly.toMap
+    }
+
+    def isExist(simpleTagMessage: SimpleTagMessage, currentMap: Map[TagMessage, Boolean]): Boolean = {
+      val tmp = currentMap.keySet.map(x => convertSTM(x))
+      tmp(simpleTagMessage)
     }
 
     evt match {
       case RequiredMessages(requireTMs: Set[Message]) =>
         val messages = requireTMs.asInstanceOf[Set[SimpleTagMessage]]
-        val daily = collection.mutable.Map[String, Boolean]()
-        val monthly = collection.mutable.Map[String, Boolean]()
+        val daily = collection.mutable.Map[TagMessage, Boolean]()
+        val monthly = collection.mutable.Map[TagMessage, Boolean]()
         messages.foreach { m =>
           m.update_frequency match {
-            case "M" => monthly += (m.value -> currentData.monthly.getOrElse(m.value, false))
-            case "D" => daily += (m.value -> currentData.daily.getOrElse(m.value, false))
+            case "M" => monthly +=
+              (if(isExist(m, currentData.monthly))
+                currentData.monthly.keySet.filter(tm => isExist(convertSTM(tm), currentData.monthly)).head -> true
+              else convertTM(m) -> false)
+            case "D" => daily +=
+              (if(isExist(m, currentData.daily))
+                currentData.daily.keySet.filter(tm => isExist(convertSTM(tm), currentData.daily)).head -> true
+              else convertTM(m) -> false)
+//            case "M" => monthly += (m -> currentData.monthly.getOrElse(m, false))
+//            case "D" => daily += (m -> currentData.daily.getOrElse(m, false))
             case _ => None
           }
         }
-        Metadata(daily.toMap, monthly.toMap)
+        Metadata(messages, daily.toMap, monthly.toMap)
 
       case ReceivedMessage(tm, Daily) =>
-        if(tm.yyyymmdd.contains(getDailyDate)) {
+        if(tm.partition_values.get.contains(getDailyDate)) {
           // partition
-          Metadata(currentData.daily + (tm.value -> true), currentData.monthly)
-        }else if(tm.yyyymm == tm.yyyymmdd){
+          Metadata(currentData.requiredMessages, currentData.daily - convertTM(tm) + (tm -> true), currentData.monthly)
+        }else if(tm.partition_fields.isEmpty && tm.partition_values.isEmpty){
           // 代碼
-          Metadata(currentData.daily + (tm.value -> true), currentData.monthly)
+          Metadata(currentData.requiredMessages, currentData.daily - convertTM(tm) + (tm -> true), currentData.monthly)
         } else {
           currentData
         }
 
       case ReceivedMessage(tm, Monthly) =>
-        if(tm.yyyymm.contains(getLastMonth))
-          Metadata(currentData.daily, currentData.monthly + (tm.value -> true))
+        if(tm.partition_values.get.contains(getLastMonth))
+          Metadata(currentData.requiredMessages, currentData.daily, currentData.monthly - convertTM(tm) + (tm -> true))
         else currentData
 
       case UpdatedMessages(Daily) =>
         if (currentData.monthly.nonEmpty & currentData.daily.nonEmpty) {
-          Metadata(resetDaily, currentData.monthly)
+          Metadata(currentData.requiredMessages, resetDaily, currentData.monthly)
         }else {
-          Metadata(resetDaily, resetMonthly)
+          Metadata(currentData.requiredMessages, resetDaily, resetMonthly)
         }
 
       case UpdatedMessages(Monthly) =>
-        val currentData = Metadata(resetDaily, resetMonthly)
-        currentData.monthlyAlreadyRun = Some(getLastMonth)
-        currentData
+        val updateCd = Metadata(currentData.requiredMessages, resetDaily, resetMonthly)
+        updateCd.monthlyAlreadyRun = Some(getLastMonth)
+        updateCd
 
       case Reset(frequencyType) =>
         frequencyType match {
-          case Daily => Metadata(resetDaily, currentData.monthly)
-          case Monthly => Metadata(resetDaily, resetMonthly)
+          case Daily => Metadata(currentData.requiredMessages, resetDaily, currentData.monthly)
+          case Monthly => Metadata(currentData.requiredMessages, resetDaily, resetMonthly)
         }
 
       case ResetRanMonthly =>
@@ -324,10 +337,10 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
         }
       }
 
-    case Event(Report(success, frequencyType, ctd), _) =>
+    case Event(Report(startTime, success, frequencyType, ctd), _) =>
       // if success, produce and update
       if(success) {
-        MessageProducer.getProducer.sendToFinishTopic(frequencyType, ctd)
+        MessageProducer.getProducer.sendToFinishTopic(startTime, frequencyType, ctd, (stateData.daily ++ stateData.monthly).keySet.map(x => convertTM2(x)).toList)
         updateAndCheck(ctd)
       }else {
         logger.warn(s"Tag($frequency) ID[${ctd.actorID}] is not finish and goto Receiving state.")
