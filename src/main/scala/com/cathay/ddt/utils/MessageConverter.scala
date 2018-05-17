@@ -1,6 +1,6 @@
 package com.cathay.ddt.utils
 
-import com.cathay.ddt.kafka.{FrontierMessage, TagFinishMessage}
+import com.cathay.ddt.kafka.{FrontierMessage, FinishMessage}
 import com.cathay.ddt.tagging.schema.TagMessage.{Message, SimpleTagMessage}
 import com.cathay.ddt.tagging.schema.{TagDictionary, TagMessage}
 import org.slf4j.LoggerFactory
@@ -52,39 +52,8 @@ object MessageConverter extends CalendarConverter {
           && !input.partition_values.contains("")) {
           TagMessage(Some(topic), frequency.toUpperCase(), value, Some(input.partition_fields.head), Some(getRealDate(input.partition_values.head)), Some(input.exec_date))
         } else TagMessage(Some(topic), frequency.toUpperCase(), value, None, None, Some(input.exec_date))
-//        if(input.partition_fields.contains("yyyymm")
-//          && !input.partition_values.isEmpty) {
-//          TagMessage(topic, frequency.toUpperCase(), value, "yyyymmdd", getRealDate(input.partition_values.head), input.exec_date)
-//        }else {
-//          TagMessage(topic, frequency.toUpperCase(), value, null, null, input.exec_date)
-//        }
-//      case "Y" =>
-//        TagMessage(topic, frequency.toUpperCase(), value, "yyyy", input.partition_values.head, input.exec_date)
     }
   }
-
-//  def CovertToTM(topic: String, input: TagFinishMessage): TagMessage = {
-//    input.update_frequency.toUpperCase() match {
-//      case "M" =>
-//        TagMessage(
-//          topic,
-//          input.update_frequency.toUpperCase(),
-//          input.tag_id,
-//          Some(input.yyyymm.getOrElse("")),
-//          None,
-//          input.finish_time)
-//      case "D" =>
-//        TagMessage(
-//          topic,
-//          input.update_frequency.toUpperCase(),
-//          input.tag_id,
-//          None,
-//          Some(input.yyyymmdd.getOrElse("")),
-//          input.finish_time)
-//    }
-//
-//  }
-
 
   // parsing sql and get require value
   def getMessages(sql: String): Iterator[Message] = {
@@ -137,9 +106,10 @@ object MessageConverter extends CalendarConverter {
       val record = line.trim.split(",")
       val key = record(0)
       val value = record(1)
+      val par = if(record(2) == "no") None else Some(record(2))
       val tmp = value.split(" ")
       kafkaMList += ((tmp(0), tmp(1)))
-      sqlMList += ((key, SimpleTagMessage(tmp(1), tmp(0))))
+      sqlMList += ((key, SimpleTagMessage(tmp(1), tmp(0), par)))
     }
     sqlMTable = sqlMList.toMap
     kafkaMTable = kafkaMList.toMap

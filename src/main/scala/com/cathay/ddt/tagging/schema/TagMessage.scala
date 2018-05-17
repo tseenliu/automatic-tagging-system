@@ -9,7 +9,7 @@ import com.cathay.ddt.kafka.TM2Show
 case class TagMessage(kafkaTopic: Option[String],
                       update_frequency: String,
                       value: String,
-                      partition_fields: Option[String]=Some("yyyymm"),
+                      partition_fields: Option[String]=None,
                       partition_values: Option[String],
                       finish_time: Option[Long]) {
   import TagMessage.SimpleTagMessage
@@ -20,7 +20,7 @@ case class TagMessage(kafkaTopic: Option[String],
 
 object TagMessage {
   trait Message
-  case class SimpleTagMessage(update_frequency: String, value: String, partition_fields: Option[String]=Some("yyyymm")) extends Message
+  case class SimpleTagMessage(update_frequency: String, value: String, partition_fields: Option[String]=None) extends Message
 
   implicit def convertTM(stm: SimpleTagMessage): TagMessage = {
     TagMessage(

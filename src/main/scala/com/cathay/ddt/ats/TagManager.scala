@@ -39,8 +39,7 @@ object TagManager extends EnvLoader {
 
   def initialDictionary(tagManager: ActorRef): Future[Unit] = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    //     load customer dictionary
-    // "disable_flag" -> false
+    // load customer dictionary
     val query = BSONDocument()
     MongoConnector.getTDCollection.flatMap(tagColl => MongoUtils.findDictionaries(tagColl, query)).map { docList =>
       docList.foreach(TD => tagManager ! Cmd(Load(TD)))
@@ -66,7 +65,8 @@ object TagManager extends EnvLoader {
   case class TagInsActorCreated(ti: TagInstance, actorRef: ActorRef) extends ManagerOperation
   case class TagInsStopped(id: String) extends ManagerOperation
   case class TagInsRemoved(id: String) extends ManagerOperation
-  case class TagInsUpdated(id: String, tagMessage: Set[Message]) extends ManagerOperation
+//  case class TagInsUpdated(id: String, tagMessage: Set[Message]) extends ManagerOperation
+  case class TagInsUpdated(frequency: String, id: String, tagMessage: Set[Message]) extends ManagerOperation
 
 
   case class Cmd(op: ManagerCommand)
@@ -100,9 +100,14 @@ object TagManager extends EnvLoader {
       TIsRegistry(state + (tagIns -> messageSet))
     }
 
-    def updateAdd(id: String, tagMessages: Set[Message]): TIsRegistry = {
-      val tagIns = getTI(id).get
-      TIsRegistry(state + (tagIns -> tagMessages))
+//    def updateAdd(id: String, tagMessages: Set[Message]): TIsRegistry = {
+//      val tagIns = getTI(id).get
+//      TIsRegistry(state + (tagIns -> tagMessages))
+//    }
+
+    def updateAdd(newTI: TagInstance, id: String, tagMessages: Set[Message]): TIsRegistry = {
+      val oldTI = getTI(id).get
+      TIsRegistry(state - oldTI + (newTI -> tagMessages))
     }
 
     def update(oldTI: TagInstance, newTI: TagInstance): TIsRegistry = {
@@ -221,11 +226,21 @@ object TagManager extends EnvLoader {
         tagMesReg.update(tagInstReg.getTMs(oldTI), oldTI, newTI))
     }
 
-    def update(id: String, tagMessages: Set[Message]): State = {
-      val removeTagMesReg = tagMesReg.removeUpdate(tagInstReg.getTMs(tagInstReg.getTI(id).get), tagInstReg.getTI(id).get)
+//    def update(id: String, tagMessages: Set[Message]): State = {
+//      val removeTagMesReg = tagMesReg.removeUpdate(tagInstReg.getTMs(tagInstReg.getTI(id).get), tagInstReg.getTI(id).get)
+//      State(
+//        tagInstReg.updateAdd(id, tagMessages),
+//        removeTagMesReg.updateAdd(tagMessages.toIterator, tagInstReg.getTI(id).get)
+//      )
+//    }
+
+    def update(newFrequency: String, id: String, tagMessages: Set[Message]): State = {
+      val oldTI = tagInstReg.getTI(id).get
+      val removeTagMesReg = tagMesReg.removeUpdate(tagInstReg.getTMs(oldTI), oldTI)
+      val newTI = TagInstance(newFrequency, oldTI.id, oldTI.actor)
       State(
-        tagInstReg.updateAdd(id, tagMessages),
-        removeTagMesReg.updateAdd(tagMessages.toIterator, tagInstReg.getTI(id).get)
+        tagInstReg.updateAdd(newTI, id, tagMessages),
+        removeTagMesReg.updateAdd(tagMessages.toIterator, newTI)
       )
     }
 
@@ -289,16 +304,17 @@ class TagManager extends PersistentActor with CalendarConverter {
     case Evt(TagInsRemoved(id)) =>
       state = state.remove(id)
       saveSnapshot(state)
-    case Evt(TagInsUpdated(id, tms)) =>
-      state = state.update(id, tms)
+    case Evt(TagInsUpdated(f, id, tms)) =>
+      state = state.update(f, id, tms)
       saveSnapshot(state)
   }
 
-  def createAndSend(ti: TagInstance, tagMessage: TagMessage) = {
-    implicit val timeout = Timeout(5 seconds)
+  def createAndSend(ti: TagInstance, tagMessage: TagMessage): Unit = {
+    implicit val timeout = Timeout(10 seconds)
     val actorRef = context.actorOf(Props(new TagState(ti.frequency, ti.id)) ,name = ti.id)
-    (actorRef ? Requirement(state.getTMs(ti))).map{
+    (actorRef ? Requirement(ti.frequency, state.getTMs(ti))).map{
       case true =>
+        log.info(s"Send Requirement Messages finished and send one message.")
         actorRef ! Receipt(tagMessage)
       case false =>
         log.error(s"Update error when Actor[${ti.id}] receive require messages.")
@@ -353,12 +369,12 @@ class TagManager extends PersistentActor with CalendarConverter {
 
     case cmd @ Cmd(Update(tagDic)) =>
       val tagMessages = MessageConverter.getMessages(tagDic.sql).toSet
-      persist(Evt(TagInsUpdated(tagDic.tag_id, tagMessages))) { evt =>
+      persist(Evt(TagInsUpdated(tagDic.update_frequency, tagDic.tag_id, tagMessages))) { evt =>
         updateState(evt)
       }
       val ti = state.tagInstReg.getTI(tagDic.tag_id)
       if(ti.get.isActive) {
-        ti.get.actor.get ! Requirement(tagMessages)
+        ti.get.actor.get ! Requirement(tagDic.update_frequency, tagMessages)
       }
 
     case cmd @ Cmd(TimeChecker(time)) =>

@@ -23,7 +23,7 @@ trait CalendarConverter extends EnvLoader {
   def getDateFormat(c: Calendar): String = SDF.format(c.getTime)
   def getMonthFormat(c: Calendar): String = SMF.format(c.getTime)
   def getCurrentMonth: String = getMonthFormat(getCalendar)
-  def getCurrentDate: String = getDateFormat(getCalendar)
+//  def getCurrentDate: String = getDateFormat(getCalendar)
   def getDayOfMonth(day: Int): String = {
     val c = Calendar.getInstance()
     c.set(Calendar.DAY_OF_MONTH, day)
@@ -84,5 +84,16 @@ trait CalendarConverter extends EnvLoader {
         getDateFormat(c)
     }
   }
+
+  def getCurrentDate: String = {
+    getDateFormat(getCalendar)
+    val c = getCalendar
+    c.setTime(SDF.parse(started))
+    c.add(Calendar.MONTH, traced-1)
+    val lastDate = c.getActualMaximum(Calendar.DATE)
+    c.set(Calendar.DATE, lastDate)
+    getDateFormat(c)
+  }
+
 
 }

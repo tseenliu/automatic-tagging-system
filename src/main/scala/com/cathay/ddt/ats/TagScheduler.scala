@@ -5,7 +5,7 @@ import akka.routing.{BroadcastGroup, RoundRobinGroup}
 import com.cathay.ddt.ats.TagState.{FrequencyType, Monthly, Report}
 import com.cathay.ddt.tagging.core.TaggingRunner
 import com.cathay.ddt.tagging.core.TaggingRunner.Run
-import com.cathay.ddt.tagging.schema.{ComposeTD, TagDictionary}
+import com.cathay.ddt.tagging.schema.ComposeTD
 import com.cathay.ddt.utils.{CalendarConverter, HdfsClient, YarnMetricsChecker}
 
 import scala.concurrent.duration._
@@ -80,20 +80,26 @@ class TagScheduler extends Actor with CalendarConverter {
     case RunInstances =>
       schedulerPoolRun()
 
-    case NonFinishInstance(startTime, frequencyType, instance) =>
-      context.actorSelection(s"/user/tag-manager/${instance.composeTd.actorID}") ! Report(startTime, success = false, frequencyType, instance.composeTd)
-
-    case FinishInstance(startTime, frequencyType, instance) =>
-      HdfsClient.getClient.delete(fileName = s"${instance.composeTd.tag_id}_$getCurrentDate")
-      context.actorSelection(s"/user/tag-manager/${instance.composeTd.actorID}") ! Report(startTime, success = true, frequencyType, instance.composeTd)
+    case CompleteInstance(runStatus, startTime, instance) =>
+      runStatus match {
+        case Finish =>
+          HdfsClient.getClient.delete(fileName = s"${instance.composeTd.tag_id}_$getCurrentDate")
+          context.actorSelection(s"/user/tag-manager/${instance.composeTd.actorID}") ! Report(Finish, startTime, instance.composeTd)
+        case NonFinish =>
+          context.actorSelection(s"/user/tag-manager/${instance.composeTd.actorID}") ! Report(NonFinish, startTime, instance.composeTd)
+      }
   }
 }
 
 object TagScheduler {
+  sealed trait RunStatus
+  case object Start extends RunStatus
+  case object Finish extends RunStatus
+  case object NonFinish extends RunStatus
+
   case class ScheduleInstance(composeTd: ComposeTD)
   case class Schedule(instance: ScheduleInstance)
   case object RunInstances
-  case class FinishInstance(startTime:Long, frequencyType: FrequencyType, instance: ScheduleInstance)
-  case class NonFinishInstance(startTime:Long, frequencyType: FrequencyType, instance: ScheduleInstance)
+  case class CompleteInstance(runStatus: RunStatus, startTime:Long, instance: ScheduleInstance)
   case class Create(availableInstance: Int)
 }
