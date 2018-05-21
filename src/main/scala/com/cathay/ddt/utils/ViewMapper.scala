@@ -20,7 +20,7 @@ class ViewMapper {
     val ParsingSQLCommand: String = {
       s"""
          |select
-         |view_id, db_id, table_id, year_ind, month_ind, day_ind, ref_ind, partition_id
+         |view_id, db_id, table_id, year_ind, month_ind, day_ind, ref_ind, partition_id, disabled_ind
          |from $VIEW_TABLE
         """.stripMargin
       }
@@ -29,22 +29,27 @@ class ViewMapper {
 
     while (res.next()) {
 //      if(res.getString(1).contains(".")) {
-        val view =
-          if(res.getString(1).contains(".")) {
+      val view =
+        if(res.getString(1).contains(".")) {
           res.getString(1).split("\\.")(1)
         }else null
-        val db = res.getString(2)
-        val table =  res.getString(3)
-        val year = res.getString(4)
-        val month = res.getString(5)
-        val day = res.getString(6)
-        val ref = res.getString(7)
-        val partition = if(res.getString(8).isEmpty) None else Some(res.getString(8))
+      val db = res.getString(2)
+      val table =  res.getString(3)
+      val year = res.getString(4)
+      val month = res.getString(5)
+      val day = res.getString(6)
+      val ref = res.getString(7)
+      val partition = if(res.getString(8).isEmpty) None else Some(res.getString(8))
+      val disable = res.getString(9)
 
-        if(ref == "v") addItem("D", view, s"$db.$table", partition)
-        else if (month == "v" && day == "v") addItem("D", view, s"$db.$table", Some("yyyymm"))
-        else if(month == "v") addItem("M", view, s"$db.$table", partition)
-        else if(day == "v") addItem("D", view, s"$db.$table", partition)
+      disable match {
+        case "" =>
+          if(ref == "v") addItem("D", view, s"$db.$table", partition)
+          else if (month == "v" && day == "v") addItem("D", view, s"$db.$table", Some("yyyymm"))
+          else if(month == "v") addItem("M", view, s"$db.$table", partition)
+          else if(day == "v") addItem("D", view, s"$db.$table", partition)
+        case _ =>
+      }
     }
   }
 

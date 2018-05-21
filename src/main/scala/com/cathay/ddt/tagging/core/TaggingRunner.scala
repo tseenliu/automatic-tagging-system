@@ -32,14 +32,16 @@ class TaggingRunner extends Actor with CalendarConverter{
       context.actorSelection(s"/user/tag-manager/${msg.instance.composeTd.actorID}") ! Report(Start, startTime, msg.instance.composeTd)
       val command = Seq("/bin/bash", s"$runPath", "--job-name", s"${msg.instance.composeTd.tag_id}", "-p", s"$TMP_FILE_PATH${msg.instance.composeTd.tag_id}_$getCurrentDate")
 
-      val execute = command !
+      val stdout = new StringBuilder
+      val stderr = new StringBuilder
+      val execute = command ! ProcessLogger(stdout append _ + "\n", stderr append _ + "\n")
 
       val frequencyType = msg.instance.composeTd.update_frequency.toUpperCase()
       if(execute == 0) {
         log.info(s"TagID[${msg.instance.composeTd.tag_id}] exit code: $execute")
         context.parent ! CompleteInstance(Finish, startTime, msg.instance)
       }else {
-        log.error(s"TagID[${msg.instance.composeTd.tag_id}] exit code: $execute")
+        log.error(s"TagID[${msg.instance.composeTd.tag_id}] exit code: $execute\n$stderr")
         context.parent ! CompleteInstance(NonFinish, startTime, msg.instance)
       }
   }

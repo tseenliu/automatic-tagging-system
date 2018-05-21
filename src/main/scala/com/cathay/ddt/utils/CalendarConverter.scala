@@ -18,8 +18,10 @@ trait CalendarConverter extends EnvLoader {
   val numsOfDelayDate: Int = config.getInt("ats.hive.scheduler.daily")
   val numsOfDelayMonth: Int = config.getInt("ats.hive.scheduler.monthly")
   val etlTime: String = config.getString("ats.hive.scheduler.time")
+  val setCurrentDay: Boolean = config.getBoolean("ats.hive.set-currentday")
+  val currentDay: String = config.getString("ats.hive.currentday")
 
-  def getCalendar: Calendar = Calendar.getInstance()
+//  def getCalendar: Calendar = Calendar.getInstance()
   def getDateFormat(c: Calendar): String = SDF.format(c.getTime)
   def getMonthFormat(c: Calendar): String = SMF.format(c.getTime)
   def getCurrentMonth: String = getMonthFormat(getCalendar)
@@ -33,13 +35,14 @@ trait CalendarConverter extends EnvLoader {
   // t-1 month
   def getLastMonth: String = {
     val c = getCalendar
+    c.add(Calendar.DATE, numsOfDelayDate)
     c.add(Calendar.MONTH, numsOfDelayMonth)
     getMonthFormat(c)
   }
 
-  // t-2 day
   def getDailyDate: String = {
     val c = getCalendar
+    // t-2 day
     c.add(Calendar.DATE, numsOfDelayDate)
     getDateFormat(c)
   }
@@ -86,13 +89,22 @@ trait CalendarConverter extends EnvLoader {
   }
 
   def getCurrentDate: String = {
-    getDateFormat(getCalendar)
-    val c = getCalendar
-    c.setTime(SDF.parse(started))
-    c.add(Calendar.MONTH, traced-1)
-    val lastDate = c.getActualMaximum(Calendar.DATE)
-    c.set(Calendar.DATE, lastDate)
-    getDateFormat(c)
+    if(setCurrentDay) {
+      val c = getCalendar
+      c.setTime(SDF.parse(currentDay))
+      //    c.add(Calendar.MONTH, traced-1)
+      //    val lastDate = c.getActualMaximum(Calendar.DATE)
+      //    c.set(Calendar.DATE, lastDate)
+      getDateFormat(c)
+    }else getDateFormat(getCalendar)
+  }
+
+  def getCalendar: Calendar = {
+    if (setCurrentDay) {
+      val c = Calendar.getInstance()
+      c.setTime(SDF.parse(currentDay))
+      c
+    }else Calendar.getInstance()
   }
 
 

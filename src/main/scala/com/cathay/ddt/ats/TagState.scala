@@ -294,6 +294,7 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
     case Event(Check, _) =>
       if(stateData.isReady){
         goto(Running) andThen{ _ =>
+          saveStateSnapshot()
           self ! Launch
         }
       }else {
@@ -302,12 +303,24 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
 
     case Event(Timeout(time), _) =>
       if (new SimpleDateFormat("HH:mm:ss").format(getCalendar.getTime).compareTo(time) == 0) {
-        if(getCurrentDate.split("-")(2) == "01"){
+        val resetDay =
+          time.compareTo("00:00:00") match {
+            case 0 =>
+              numsOfDelayDate.abs.toString
+            case _ =>
+              if((numsOfDelayDate.abs-1).toString.length == 1)
+                s"0${(numsOfDelayDate.abs-1).toString}"
+              else (numsOfDelayDate.abs-1).toString
+          }
+
+        if(getCurrentDate.split("-")(2) == resetDay) {
           goto(Verifying) applying Reset(Monthly) andThen { _ =>
+            saveStateSnapshot()
             self ! Check
           }
         } else {
           goto(Verifying) applying Reset(Daily) andThen { _ =>
+            saveStateSnapshot()
             self ! Check
           }
         }
@@ -330,10 +343,7 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
             stay()
         }
       }else {
-        // without started and traced value
-//        val composeTd = getComposedSql(Daily, dic)
-//        context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(composeTd))
-//        stay()
+        // tag dic's started and traced is not Defined
         freq match {
           case "M" =>
             val composeTd = getComposedSql(Monthly, dic)
@@ -367,10 +377,12 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
     ctd.asInstanceOf[ComposeTD].update_frequency match {
       case "M" =>
           goto(Verifying) applying UpdatedMessages(Monthly) andThen { _ =>
+            saveStateSnapshot()
             self ! Check
           }
       case "D" =>
         goto(Verifying) applying UpdatedMessages(Daily) andThen { _ =>
+          saveStateSnapshot()
           self ! Check
         }
     }
@@ -382,6 +394,7 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
       stay() applying RequiredMessages(tmSet) andThen { _ =>
         if (stateData.isNull) sender() ! false
         else sender() ! true
+        saveStateSnapshot()
       }
 
     case Event(Check, metadata) =>

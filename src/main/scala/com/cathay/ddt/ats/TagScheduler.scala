@@ -87,6 +87,7 @@ class TagScheduler extends Actor with CalendarConverter {
           context.actorSelection(s"/user/tag-manager/${instance.composeTd.actorID}") ! Report(Finish, startTime, instance.composeTd)
         case NonFinish =>
           context.actorSelection(s"/user/tag-manager/${instance.composeTd.actorID}") ! Report(NonFinish, startTime, instance.composeTd)
+        case _ =>
       }
   }
 }
