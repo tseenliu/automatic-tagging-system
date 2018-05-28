@@ -40,7 +40,7 @@ class MessageProducer extends CalendarConverter {
     log.info(s"Tag(${ctd.update_frequency}) ID[${ctd.actorID}] is producing started topic.")
   }
 
-  def sendToFinishTopic(startTime: Long, ctd: ComposeTD, messages: List[TM2Show]): Unit = {
+  def sendToFinishTopic(startTime: Long, ctd: ComposeTD, messages: List[TM2Show], is_success: Boolean): Unit = {
     val finishTime = getCalendar.getTimeInMillis/1000
     val durationTime = finishTime - startTime
     val fMessage =
@@ -53,7 +53,7 @@ class MessageProducer extends CalendarConverter {
         getCurrentDate,
         durationTime,
         finishTime,
-        is_success = true,
+        is_success,
         messages)
     val record = KafkaProducerRecord(publishTopic, Some("tagKey"), s"${fMessage.toJson.prettyPrint}")
     producer.send(record)

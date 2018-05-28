@@ -25,15 +25,16 @@ object MessageConverter extends CalendarConverter {
   var kafkaMTable: Map[String, String] = Map()
 
   def getRealDate(partitionValue: String): String = {
-    partitionValue match {
-      case x if x == getCurrentMonth => getDailyDate
+    val c = getCalendar
+    c.setTime(SMF.parse(getDailyDate.split("-").dropRight(1).mkString("")))
+    val pv = getCalendar
+    pv.setTime(SMF.parse(partitionValue))
 
-      case x if x == getLastMonth =>
-        if(getCurrentDate == getDayOfMonth(1)) getDailyDate
-        else getLastDayOfMonth(partitionValue)
-
-      case _ => getLastDayOfMonth(partitionValue)
-    }
+    if(pv.compareTo(c) == 0) {
+      getDailyDate
+    }else if(pv.before(c)) {
+      getLastDayOfMonth(partitionValue)
+    }else null
   }
 
   // Convert to tagMessages using a mapping table

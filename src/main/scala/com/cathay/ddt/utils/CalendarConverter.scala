@@ -34,10 +34,16 @@ trait CalendarConverter extends EnvLoader {
 
   // t-1 month
   def getLastMonth: String = {
-    val c = getCalendar
-    c.add(Calendar.DATE, numsOfDelayDate)
-    c.add(Calendar.MONTH, numsOfDelayMonth)
-    getMonthFormat(c)
+    if(getCurrentDate.split("-")(2) == s"0${numsOfDelayDate.abs.toString}") {
+      val c = getCalendar
+      c.add(Calendar.MONTH, numsOfDelayMonth)
+      getMonthFormat(c)
+    }else {
+      val c = getCalendar
+      c.add(Calendar.DATE, numsOfDelayDate)
+      c.add(Calendar.MONTH, numsOfDelayMonth)
+      getMonthFormat(c)
+    }
   }
 
   def getDailyDate: String = {

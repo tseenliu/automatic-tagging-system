@@ -218,7 +218,7 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
         }
 
       case ReceivedMessage(tm, Monthly) =>
-        if(tm.partition_values.get.contains(getLastMonth))
+        if(tm.partition_fields.isDefined && tm.partition_values.get.contains(getLastMonth))
           Metadata(currentData.requiredMessages, currentData.daily, currentData.monthly - convertTM(tm) + (tm -> true))
         else currentData
 
@@ -363,9 +363,10 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
           MessageProducer.getProducer.sendToStart(startTime, ctd, stateData.requiredMessages.toList)
           stay()
         case Finish =>
-          MessageProducer.getProducer.sendToFinishTopic(startTime, ctd, (stateData.daily ++ stateData.monthly).keySet.map(x => convertTM2(x)).toList)
+          MessageProducer.getProducer.sendToFinishTopic(startTime, ctd, (stateData.daily ++ stateData.monthly).keySet.map(x => convertTM2(x)).toList, is_success = true)
           updateAndCheck(ctd)
         case NonFinish =>
+          MessageProducer.getProducer.sendToFinishTopic(startTime, ctd, (stateData.daily ++ stateData.monthly).keySet.map(x => convertTM2(x)).toList, is_success = false)
           logger.warn(s"Tag($freq) ID[${ctd.actorID}] is not finish and goto Receiving state.")
           ctd.update_frequency match {
             case "M" => goto (Receiving) applying Reset(Monthly)
@@ -414,8 +415,6 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
         context.parent ! Cmd(StopTag(id))
         stop()
 
-      }else if(getCurrentDate >= getDayOfMonth(-numsOfDelayMonth)) {
-        goto(Receiving)
       }else {
         goto(Receiving)
       }
