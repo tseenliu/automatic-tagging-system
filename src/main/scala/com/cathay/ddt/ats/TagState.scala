@@ -87,6 +87,7 @@ object TagState {
                       override val daily: Map[TagMessage, Boolean],
                       override val monthly: Map[TagMessage, Boolean]) extends Data {
     var monthlyAlreadyRun: Option[String] = None
+    var rerty: Int = 0
     override def toString: String = {
       s"===================================================================" +
         s"\nRequired: $requiredMessages\nDaily: $daily\nMonthly[${monthlyAlreadyRun.getOrElse("None")}]: $monthly\n"
@@ -366,11 +367,19 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
           MessageProducer.getProducer.sendToFinishTopic(startTime, ctd, (stateData.daily ++ stateData.monthly).keySet.map(x => convertTM2(x)).toList, is_success = true)
           updateAndCheck(ctd)
         case NonFinish =>
-          MessageProducer.getProducer.sendToFinishTopic(startTime, ctd, (stateData.daily ++ stateData.monthly).keySet.map(x => convertTM2(x)).toList, is_success = false)
-          logger.warn(s"Tag($freq) ID[${ctd.actorID}] is not finish and goto Receiving state.")
-          ctd.update_frequency match {
-            case "M" => goto (Receiving) applying Reset(Monthly)
-            case "D" => goto (Receiving) applying Reset(Daily)
+          stateData.asInstanceOf[Metadata].rerty += 1
+          if (stateData.asInstanceOf[Metadata].rerty==3) {
+            MessageProducer.getProducer.sendToFinishTopic(startTime, ctd, (stateData.daily ++ stateData.monthly).keySet.map(x => convertTM2(x)).toList, is_success = false)
+            logger.warn(s"Tag($freq) ID[${ctd.actorID}] is not finish and goto Receiving state.")
+            ctd.update_frequency match {
+              case "M" => goto (Receiving) applying Reset(Monthly)
+              case "D" => goto (Receiving) applying Reset(Daily)
+            }
+          } else {
+            goto(Running) andThen{ _ =>
+              saveStateSnapshot()
+              self ! Launch
+            }
           }
       }
   }
