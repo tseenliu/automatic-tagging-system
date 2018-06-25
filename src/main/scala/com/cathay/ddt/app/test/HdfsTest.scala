@@ -1,6 +1,7 @@
 package com.cathay.ddt.app.test
 
 import com.cathay.ddt.tagging.schema.{ComposeTD, QueryTD, TagDictionary, TagType}
+import com.cathay.ddt.utils.HdfsClient
 import spray.json._
 
 object HdfsTest extends App {
@@ -71,39 +72,39 @@ object HdfsTest extends App {
     system_name = "ATS")
 
 
-//  import com.cathay.ddt.tagging.protocal.ComposeTDProtocal._
-//  import com.cathay.ddt.tagging.protocal.TDProtocol._
-//
-//  val json = neilYoung.toJson
-//  println(json.prettyPrint)
-//
+  import com.cathay.ddt.tagging.protocal.ComposeTDProtocal._
+  import com.cathay.ddt.tagging.protocal.TDProtocol._
+
+  val json = neilYoung.toJson
+  println(json.prettyPrint)
+
 //  val json2 = neilYoung1.toJson
 //  println(json2.prettyPrint)
 
-//  HdfsClient.getClient.write(fileName = "test.json", data = json.compactPrint.getBytes)
-//  val a = HdfsClient.delete(fileName = "test.json")
-//  println(s"status: $a")
+  HdfsClient.getClient.write(fileName = "test.json", data = json.compactPrint.getBytes)
+  val a = HdfsClient.getClient.delete(fileName = "test.json")
+  println(s"status: $a")
 
 
-  val dynamicTD = QueryTD(
-    source_type = Some("bank"),
-    source_item = Some("信用卡/簽帳卡"),
-    tag_type = Some(List(TagType("D","d"), TagType("E","e"))),
-    tag_name = Some("超市購物"),
-    update_frequency = Some("M"),
-    started = None,
-    traced = None,
-    score_method = Some("Z"),
-    attribute = Some("behavior"),
-    system_name = Some("ATS")
-  )
-
-  import com.cathay.ddt.tagging.protocal.QueryTDProtocol._
-  val json = dynamicTD.toJson
-  println(json.prettyPrint)
-
-
-  val aaa = """{update_frequency: M, source_type: bank}""".toJson
-  val taaa = aaa.asInstanceOf[QueryTD]
-  println(taaa.toJson.prettyPrint)
+//  val dynamicTD = QueryTD(
+//    source_type = Some("bank"),
+//    source_item = Some("信用卡/簽帳卡"),
+//    tag_type = Some(List(TagType("D","d"), TagType("E","e"))),
+//    tag_name = Some("超市購物"),
+//    update_frequency = Some("M"),
+//    started = None,
+//    traced = None,
+//    score_method = Some("Z"),
+//    attribute = Some("behavior"),
+//    system_name = Some("ATS")
+//  )
+//
+//  import com.cathay.ddt.tagging.protocal.QueryTDProtocol._
+//  val json = dynamicTD.toJson
+//  println(json.prettyPrint)
+//
+//
+//  val aaa = """{update_frequency: M, source_type: bank}""".toJson
+//  val taaa = aaa.asInstanceOf[QueryTD]
+//  println(taaa.toJson.prettyPrint)
 }

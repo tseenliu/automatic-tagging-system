@@ -25,7 +25,11 @@ class TagScheduler extends Actor with CalendarConverter {
 
   override def preStart(): Unit = {
     log.info(s"TagScheduler is [Start].")
-    self ! Create(ymChecker.getYarnMetrics.get.getTotalInstance)
+    val yarnMetrics = YarnMetricsChecker.YARN_MASTERS.flatMap{ x =>
+      try { YarnMetricsChecker.getChecker.getYarnMetrics(x) }
+      catch { case foo: java.lang.IndexOutOfBoundsException => None }
+    }.head
+    self ! Create(yarnMetrics.getTotalInstance)
   }
 
   override def postStop(): Unit = {
@@ -40,7 +44,7 @@ class TagScheduler extends Actor with CalendarConverter {
   def createSparkTagJob(nums: Int): Unit = {
     for( a <- 1 until nums+1) {
       context.actorOf(Props[TaggingRunner], s"runner$a")
-      HscPaths += s"/user/tag-scheduler/runner$a"
+      HscPaths += s"/user/tag-manager/tag-scheduler/runner$a"
     }
   }
 

@@ -7,7 +7,7 @@ import sys.process._
 class YarnMetricsChecker {
   import YarnMetricsChecker._
 
-  def getYarnMetrics: Option[YarnMetrics] = {
+  def getYarnMetrics(YARN_HOST: String): Option[YarnMetrics] = {
     val pattern = "[0-9]+".r
     val stdout = new StringBuilder
     val stderr = new StringBuilder
@@ -27,9 +27,8 @@ class YarnMetricsChecker {
           Metricslist(16)toInt
         )
       )
-    }else {
-      None
-    }
+    }else None
+
   }
 
 }
@@ -38,7 +37,7 @@ object YarnMetricsChecker extends EnvLoader{
   private final val CHECKER = new YarnMetricsChecker
 
   val atsConfig: Config = getConfig("ats")
-  val YARN_HOST: String = atsConfig.getString("ats.yarn.resourcemanager-host")
+  val YARN_MASTERS: Array[String] = atsConfig.getStringList("ats.yarn.resourcemanager-host").toArray().map(_.toString)
   val YARN_PORT: String = atsConfig.getString("ats.yarn.resourcemanager-port")
   val YARN_THRESHOLD: Double = atsConfig.getString("ats.yarn.resource-threshold").toDouble
   val SPARK_CORE: Int = atsConfig.getString("ats.spark.job-core").toInt

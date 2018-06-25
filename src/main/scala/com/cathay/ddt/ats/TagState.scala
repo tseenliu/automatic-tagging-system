@@ -1,8 +1,8 @@
 package com.cathay.ddt.ats
 
 import java.text.SimpleDateFormat
-
 import scala.reflect._
+import akka.actor.ActorRef
 import akka.persistence._
 import akka.persistence.fsm._
 import akka.persistence.fsm.PersistentFSM.FSMState
@@ -137,7 +137,7 @@ object TagState {
 
 }
 
-class TagState(frequency: String, id: String) extends PersistentFSM[TagState.State, TagState.Data, TagState.DomainEvent] with CalendarConverter {
+class TagState(frequency: String, id: String, schedulerActor: ActorRef) extends PersistentFSM[TagState.State, TagState.Data, TagState.DomainEvent] with CalendarConverter {
   import TagState._
 
   var freq: String = frequency
@@ -336,11 +336,11 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
         freq match {
           case "M" =>
             val composeTd = getComposedSql(Monthly, dic)
-            context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(composeTd))
+            schedulerActor ! Schedule(ScheduleInstance(composeTd))
             stay()
           case "D" =>
             val composeTd = getComposedSql(Daily, dic)
-            context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(composeTd))
+            schedulerActor ! Schedule(ScheduleInstance(composeTd))
             stay()
         }
       }else {
@@ -348,11 +348,11 @@ class TagState(frequency: String, id: String) extends PersistentFSM[TagState.Sta
         freq match {
           case "M" =>
             val composeTd = getComposedSql(Monthly, dic)
-            context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(composeTd))
+            schedulerActor ! Schedule(ScheduleInstance(composeTd))
             stay()
           case "D" =>
             val composeTd = getComposedSql(Daily, dic)
-            context.actorSelection("/user/tag-scheduler") ! Schedule(ScheduleInstance(composeTd))
+            schedulerActor ! Schedule(ScheduleInstance(composeTd))
             stay()
         }
       }

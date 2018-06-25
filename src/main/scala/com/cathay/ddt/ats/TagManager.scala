@@ -3,20 +3,23 @@ package com.cathay.ddt.ats
 import java.text.SimpleDateFormat
 
 import akka.persistence._
+import akka.pattern.ask
+import akka.util.Timeout
+import akka.actor.OneForOneStrategy
+import akka.actor.SupervisorStrategy.{Stop, _}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import com.cathay.ddt.kafka.MessageConsumer
 import com.cathay.ddt.tagging.schema.{TagDictionary, TagMessage}
 import com.cathay.ddt.tagging.schema.TagMessage.Message
-import reactivemongo.bson.BSONDocument
 import com.cathay.ddt.ats.TagState._
-import akka.pattern.ask
-import akka.util.Timeout
 import com.cathay.ddt.utils.{CalendarConverter, EnvLoader, MessageConverter}
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import org.slf4j.LoggerFactory
+import reactivemongo.bson.BSONDocument
+
 
 /**
   * Created by Tse-En on 2017/12/17.
@@ -30,7 +33,8 @@ object TagManager extends EnvLoader {
   def initiate: ActorRef = {
     val system = ActorSystem("tag", config.getConfig("ats.TagManager"))
     val tagManager = system.actorOf(Props[TagManager], name="tag-manager")
-    system.actorOf(Props[TagScheduler], name="tag-scheduler")
+    //    val schedulerAf = system.actorOf(Props[TagScheduler], name="tag-scheduler")
+    //    val tagManager = system.actorOf(Props(new TagManager(schedulerAf)), name="tag-manager")
     initialDictionary(tagManager)
 
     // if not test, should delete
@@ -270,7 +274,22 @@ class TagManager extends PersistentActor with CalendarConverter {
   import TagManager._
   import scala.concurrent.ExecutionContext.Implicits.global
 
+  var schedulerAf: ActorRef = _
+  var state: State = State(TIsRegistry(), TMsRegistry())
+
+  override val supervisorStrategy =
+    OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 second) {
+      case err: java.util.NoSuchElementException =>
+        log.error(err.toString)
+        Stop
+      case err: Exception =>
+        log.error(err.toString)
+        Stop
+    }
+
   override def preStart(): Unit = {
+    schedulerAf = context.actorOf(Props[TagScheduler], name="tag-scheduler")
+    context.actorOf(Props[MessageConsumer], "messages-consumer")
     context.system.scheduler.schedule(0 seconds, 1 seconds, self, Cmd(TimeChecker(etlTime)))
     log.info(s"TagManager is [Start].")
   }
@@ -279,13 +298,10 @@ class TagManager extends PersistentActor with CalendarConverter {
     log.info(s"TagManager is [Stop].")
   }
 
-  var state: State = State(TIsRegistry(), TMsRegistry())
-  context.actorOf(Props[MessageConsumer], "messages-consumer")
-
   override def persistenceId: String = "tag-manager"
 
   def createActor(frequency: String, actorId: String): ActorRef = {
-    context.actorOf(Props(new TagState(frequency, actorId)) ,name = actorId)
+    context.actorOf(Props(new TagState(frequency, actorId, schedulerAf)) ,name = actorId)
   }
 
   def updateState(evt: Evt): Unit = evt match {
@@ -311,7 +327,7 @@ class TagManager extends PersistentActor with CalendarConverter {
 
   def createAndSend(ti: TagInstance, tagMessage: TagMessage): Unit = {
     implicit val timeout = Timeout(10 seconds)
-    val actorRef = context.actorOf(Props(new TagState(ti.frequency, ti.id)) ,name = ti.id)
+    val actorRef = context.actorOf(Props(new TagState(ti.frequency, ti.id, schedulerAf)) ,name = ti.id)
     (actorRef ? Requirement(ti.frequency, state.getTMs(ti))).map{
       case true =>
         log.info(s"Send Requirement Messages finished and send one message.")
