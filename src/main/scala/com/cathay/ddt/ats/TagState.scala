@@ -133,6 +133,7 @@ object TagState {
   case object Stop
   case object GetStatus
   case object RevivalCheck
+  case object Revival
   case class Timeout(time: String)
 
 }
@@ -504,6 +505,9 @@ class TagState(frequency: String, id: String, schedulerActor: ActorRef) extends 
 //      println(s"Tag $frequency, $id: This state $stateName don't need to Revive")
       stay()
 
+    case Event(Revival, _) =>
+      goto(Receiving)
+
     case Event(Requirement(frequency, tmSet), _) =>
       println(s"Requirement not receive in State: $stateName")
       sender() ! false
@@ -512,4 +516,10 @@ class TagState(frequency: String, id: String, schedulerActor: ActorRef) extends 
     case Event(Timeout(time), _) =>
       stay()
   }
+
+  onTransition {
+    case Running -> Running =>
+      self ! Revival
+  }
+
 }

@@ -258,10 +258,10 @@ class TagManager extends PersistentActor with CalendarConverter {
     OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 second) {
       case err: java.util.NoSuchElementException =>
         log.error(err.toString)
-        Stop
+        Restart
       case err: Exception =>
         log.error(err.toString)
-        Stop
+        Restart
     }
 
   override def preStart(): Unit = {
