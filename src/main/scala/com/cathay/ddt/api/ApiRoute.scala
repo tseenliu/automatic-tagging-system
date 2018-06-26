@@ -46,7 +46,8 @@ trait ApiRoute extends EnvLoader{
       dtd.attribute.get,
       dtd.creator.get,
       dtd.is_focus.get,
-      dtd.system_name.get
+      dtd.system_name.get,
+      dtd.tickets.get
     )
   }
 
@@ -57,7 +58,6 @@ trait ApiRoute extends EnvLoader{
     case _: reactivemongo.api.Cursor.NoSuchResultException.type =>
       extractUri { uri =>
         log.warn(s"Request to $uri could not be handled normally")
-//        complete(HttpResponse(InternalServerError, entity = "Bad numbers, bad result!!!"))
         complete(StatusCodes.BadRequest, JsObject(
           "message" -> JsString(s"tagID is not exist.")
         ))
@@ -65,7 +65,6 @@ trait ApiRoute extends EnvLoader{
   }
 
   val route = handleExceptions(myExceptionHandler) {
-
     val tagManagerSelection: ActorSelection =
       system.actorSelection(s"akka.tcp://tag@$tmHost:$tmPort/user/tag-manager")
 
@@ -75,11 +74,6 @@ trait ApiRoute extends EnvLoader{
       pathEnd {
         // write operation
         (post & entity(as[DynamicTD])) { td =>
-          //        complete {
-          //          MongoConnector.getTDCollection.flatMap( coll => MongoUtils.insert(coll, td) ) map {
-          //            case true => Created -> Map("tag_id" -> td.tag_id).toJson
-          //          }
-          //        }
           onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.insert(coll, td))) {
             case true =>
               log.info(s"Request to insert tagID[${td.tag_id}].")
@@ -102,11 +96,6 @@ trait ApiRoute extends EnvLoader{
       path(Segment) { id =>
         put {
           entity(as[DynamicTD]) { td =>
-//              complete {
-//                val query = BSONDocument("tag_id" -> id)
-//                val TD = MongoConnector.getTDCollection.flatMap(coll => MongoUtils.updateFind(coll, query, td))
-//                OK -> TD
-//              }
             val query = BSONDocument("tag_id" -> id)
             onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.update(coll, query, td))) {
               case true =>
@@ -131,31 +120,6 @@ trait ApiRoute extends EnvLoader{
         path("search") {
           import com.cathay.ddt.tagging.protocal.QueryTDProtocol._
           (post & entity(as[QueryTD])) { dtd =>
-//            var bArr = ArrayBuffer[BSONDocument]()
-//            var query = BSONDocument()
-//            if(dtd.source_type.isDefined) {
-//              query ++= BSONDocument("source_type" -> dtd.source_type.get)
-//            }else if(dtd.source_item.isDefined) {
-//              query ++= BSONDocument("source_item" -> dtd.source_item.get)
-//            }
-
-//            if (td.tag_type.isDefined) {
-//              val typeList = td.tag_type.get
-//              for (i <- td.tag_type.get.indices) {
-//                bArr += BSONDocument("type_L1" -> typeList(i).type_L1, "type_L2" -> typeList(i).type_L2)
-//              }
-//            }
-//            query = BSONDocument(
-//              "source_type" -> td.source_type.get,
-//              "source_item" -> td.source_item.get,
-//              "tag_type" -> BSONArray(bArr),
-//              "tag_name" -> td.tag_name.get,
-//              "update_frequency" -> td.update_frequency.get,
-//              "started" -> td.started.get,
-//              "traced" -> td.traced.get,
-//              "score_method" -> td.score_method.get,
-//              "attribute" -> td.attribute.get,
-//              "system_name" -> td.system_name.get)
             complete {
               log.info(s"Request to search $dtd.")
               OK -> MongoConnector.getTDCollection.flatMap(coll => MongoUtils.findDictionaries(coll, dtd))
@@ -198,19 +162,6 @@ trait ApiRoute extends EnvLoader{
                 "message" -> JsString(s"tagID[${id}] remove failed.")
               ))
           }
-//          onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.remove(coll, BSONDocument("tag_id" -> id)))) {
-//            case true =>
-//              tagManagerSelection ! Cmd(Remove(id))
-//              Thread.sleep(500)
-//              tagManagerSelection ! Cmd(ShowState)
-//              complete(StatusCodes.OK, JsObject(
-//                "message" -> JsString(s"tagID[${id}] remove successfully.")
-//              ))
-//            case false =>
-//              complete(StatusCodes.BadRequest, JsObject(
-//                "message" -> JsString(s"tagID[${id}] remove failed.")
-//              ))
-//          }
         } ~
         // find all operation
         pathEnd {

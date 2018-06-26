@@ -5,7 +5,7 @@ import com.cathay.ddt.kafka.TM2Show
 /**
   * Created by Tse-En on 2017/12/19.
   */
-//case class RequiredMessage(kafkaTopic: String, update_frequency: String, value: String, partitioned: Option[String])
+
 case class TagMessage(kafkaTopic: Option[String],
                       update_frequency: String,
                       value: String,

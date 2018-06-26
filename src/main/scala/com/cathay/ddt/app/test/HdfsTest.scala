@@ -39,7 +39,8 @@ object HdfsTest extends App {
     attribute = "behavior",
     creator = "Jasmine",
     is_focus = true,
-    system_name = "ATS")
+    system_name = "ATS",
+    tickets = List("aaa", "fvv"))
 
   val neilYoung = ComposeTD(
     tag_id = randomString(20),
@@ -72,20 +73,22 @@ object HdfsTest extends App {
     system_name = "ATS")
 
 
-  import com.cathay.ddt.tagging.protocal.ComposeTDProtocal._
+  // test1
   import com.cathay.ddt.tagging.protocal.TDProtocol._
+  val json2 = neilYoung1.toJson
+  println(json2.prettyPrint)
+  val json3 = json2.convertTo[TagDictionary]
+  println(json3.tickets)
 
-  val json = neilYoung.toJson
-  println(json.prettyPrint)
-
-//  val json2 = neilYoung1.toJson
-//  println(json2.prettyPrint)
-
-  HdfsClient.getClient.write(fileName = "test.json", data = json.compactPrint.getBytes)
-  val a = HdfsClient.getClient.delete(fileName = "test.json")
-  println(s"status: $a")
-
-
+//  // test2
+//  import com.cathay.ddt.tagging.protocal.ComposeTDProtocal._
+//  val json = neilYoung.toJson
+//  println(json.prettyPrint)
+//  HdfsClient.getClient.write(fileName = "test.json", data = json.compactPrint.getBytes)
+//  val a = HdfsClient.getClient.delete(fileName = "test.json")
+//  println(s"status: $a")
+//
+//  // test3
 //  val dynamicTD = QueryTD(
 //    source_type = Some("bank"),
 //    source_item = Some("信用卡/簽帳卡"),
@@ -104,6 +107,7 @@ object HdfsTest extends App {
 //  println(json.prettyPrint)
 //
 //
+//  // test4
 //  val aaa = """{update_frequency: M, source_type: bank}""".toJson
 //  val taaa = aaa.asInstanceOf[QueryTD]
 //  println(taaa.toJson.prettyPrint)

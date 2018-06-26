@@ -42,7 +42,8 @@ class TagDictionaryExtension {
       "attribute" -> td.attribute,
       "creator" -> td.creator,
       "is_focus" -> td.is_focus,
-      "system_name" -> td.system_name)
+      "system_name" -> td.system_name,
+      "tickets" -> td.tickets)
   }
 
   implicit object TDReader extends BSONDocumentReader[TagDictionary] {
@@ -64,7 +65,8 @@ class TagDictionaryExtension {
       doc.getAs[String]("attribute").get,
       doc.getAs[String]("creator").get,
       doc.getAs[Boolean]("is_focus").get,
-      doc.getAs[String]("system_name").get)
+      doc.getAs[String]("system_name").get,
+      doc.getAs[List[String]]("tickets").toList.flatten)
   }
 
 }

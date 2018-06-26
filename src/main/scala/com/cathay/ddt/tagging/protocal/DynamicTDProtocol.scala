@@ -5,5 +5,5 @@ import spray.json.DefaultJsonProtocol
 
 object DynamicTDProtocol extends DefaultJsonProtocol {
   implicit val tagTypeFormat = jsonFormat2(TagType)
-  implicit val dynamicTDFormat = jsonFormat18(DynamicTD)
+  implicit val dynamicTDFormat = jsonFormat19(DynamicTD)
 }

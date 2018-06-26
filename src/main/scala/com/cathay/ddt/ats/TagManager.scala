@@ -33,11 +33,7 @@ object TagManager extends EnvLoader {
   def initiate: ActorRef = {
     val system = ActorSystem("tag", config.getConfig("ats.TagManager"))
     val tagManager = system.actorOf(Props[TagManager], name="tag-manager")
-    //    val schedulerAf = system.actorOf(Props[TagScheduler], name="tag-scheduler")
-    //    val tagManager = system.actorOf(Props(new TagManager(schedulerAf)), name="tag-manager")
     initialDictionary(tagManager)
-
-    // if not test, should delete
     tagManager
   }
 
@@ -63,13 +59,11 @@ object TagManager extends EnvLoader {
 
 
   sealed trait ManagerOperation
-  //sealed trait TIOperation extends ManagerOperation
   case class TagRegister(tagDic: TagDictionary) extends ManagerOperation
   case class TagMesAdded(id: String, tagMessage: Message) extends ManagerOperation
   case class TagInsActorCreated(ti: TagInstance, actorRef: ActorRef) extends ManagerOperation
   case class TagInsStopped(id: String) extends ManagerOperation
   case class TagInsRemoved(id: String) extends ManagerOperation
-//  case class TagInsUpdated(id: String, tagMessage: Set[Message]) extends ManagerOperation
   case class TagInsUpdated(frequency: String, id: String, tagMessage: Set[Message]) extends ManagerOperation
 
 
@@ -103,11 +97,6 @@ object TagManager extends EnvLoader {
       val messageSet = state(tagIns) ++ Set(tagMessage)
       TIsRegistry(state + (tagIns -> messageSet))
     }
-
-//    def updateAdd(id: String, tagMessages: Set[Message]): TIsRegistry = {
-//      val tagIns = getTI(id).get
-//      TIsRegistry(state + (tagIns -> tagMessages))
-//    }
 
     def updateAdd(newTI: TagInstance, id: String, tagMessages: Set[Message]): TIsRegistry = {
       val oldTI = getTI(id).get
@@ -230,14 +219,6 @@ object TagManager extends EnvLoader {
         tagMesReg.update(tagInstReg.getTMs(oldTI), oldTI, newTI))
     }
 
-//    def update(id: String, tagMessages: Set[Message]): State = {
-//      val removeTagMesReg = tagMesReg.removeUpdate(tagInstReg.getTMs(tagInstReg.getTI(id).get), tagInstReg.getTI(id).get)
-//      State(
-//        tagInstReg.updateAdd(id, tagMessages),
-//        removeTagMesReg.updateAdd(tagMessages.toIterator, tagInstReg.getTI(id).get)
-//      )
-//    }
-
     def update(newFrequency: String, id: String, tagMessages: Set[Message]): State = {
       val oldTI = tagInstReg.getTI(id).get
       val removeTagMesReg = tagMesReg.removeUpdate(tagInstReg.getTMs(oldTI), oldTI)
@@ -261,10 +242,6 @@ object TagManager extends EnvLoader {
     def ShowTagInfo(): Unit = {
       log.info(s"Tag Dictionary loading finished." +
         s" Total Tags:${tagInstReg.getNumsOfTags}, Total Tables:${tagMesReg.getNumsOfTables}\n")
-//      log.info(s"===================================================================" +
-//        s"\nTag Dictionary loading finished." +
-//        s"\nTotal Tags:${tagInstReg.getNumsOfTags}" +
-//        s"\nTotal Tables:${tagMesReg.getNumsOfTables}\n")
     }
   }
 

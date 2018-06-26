@@ -28,7 +28,6 @@ class ViewMapper {
     val res = stmt.executeQuery(ParsingSQLCommand)
 
     while (res.next()) {
-//      if(res.getString(1).contains(".")) {
       val view =
         if(res.getString(1).contains(".")) {
           res.getString(1).split("\\.")(1)

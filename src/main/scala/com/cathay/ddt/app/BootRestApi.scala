@@ -21,10 +21,5 @@ object BootRestApi extends App with ApiRoute with EnvLoader {
   val bindingFuture = Http().bindAndHandle(route, host, port)
 
   println(s"Server online at http://$host:$port/\nWelcome to use ATS rest api!")
-//  Console.readLine()
-
-//  bindingFuture
-//    .flatMap(_.unbind())
-//    .onComplete(_ => system.terminate())
 
 }

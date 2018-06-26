@@ -30,6 +30,16 @@ object MongoUtils extends TagDictionaryExtension {
     //writeRes.map(_ => {}) // in this example, do nothing with the success
   }
 
+  def insert(coll: BSONCollection, td: TagDictionary): Future[Boolean] = {
+    implicit val dynamicTDHandler = Macros.handler[TagDictionary]
+    val writeRes: Future[WriteResult] = coll.insert(td)
+    writeRes.onComplete { // Dummy callbacks
+      case Failure(e) => log.error(s"${e.printStackTrace().toString}")
+      case Success(writeResult) => log.info(s"successfully inserted document with result: $writeResult")
+    }
+    writeRes.map(_.ok)
+  }
+
   def insert(coll: BSONCollection, td: DynamicTD): Future[Boolean] = {
     implicit val dynamicTDHandler = Macros.handler[DynamicTD]
     val writeRes: Future[WriteResult] = coll.insert(td)

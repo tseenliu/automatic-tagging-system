@@ -29,12 +29,14 @@ object TDProtocol extends DefaultJsonProtocol {
         "attribute" -> JsString(td.attribute),
         "creator" -> JsString(td.creator),
         "is_focus" -> JsBoolean(td.is_focus),
-        "system_name" -> JsString(td.system_name)
+        "system_name" -> JsString(td.system_name),
+        "tickets" -> td.tickets.toJson
       )
     }
     def read(value: JsValue): TagDictionary = {
       val jso = value.asJsObject
       val tagType = jso.fields("tag_type").convertTo[List[TagType]]
+      val tickets = jso.fields("tickets").convertTo[List[String]]
 
       value.asJsObject.getFields(
         "tag_id",
@@ -60,7 +62,7 @@ object TDProtocol extends DefaultJsonProtocol {
         JsString(score_method), JsString(attribute), JsString(creator), JsBoolean(is_focus), JsString(system_name)) =>
           TagDictionary(
             tag_id, source_type, source_item, tagType, tag_name, sql, update_frequency, Some(started.toInt), Some(traced.toInt),
-            description, create_time, update_time, Some(disable_flag), score_method, attribute, creator, is_focus, system_name)
+            description, create_time, update_time, Some(disable_flag), score_method, attribute, creator, is_focus, system_name, tickets)
 
         case Seq(
         JsString(tag_id), JsString(source_type), JsString(source_item), JsString(tag_name), JsString(sql), JsString(update_frequency),
@@ -68,7 +70,7 @@ object TDProtocol extends DefaultJsonProtocol {
         JsString(score_method), JsString(attribute), JsString(creator), JsBoolean(is_focus), JsString(system_name)) =>
           TagDictionary(
             tag_id, source_type, source_item, tagType, tag_name, sql, update_frequency, Some(started.toInt), Some(traced.toInt),
-            description, create_time, update_time, None, score_method, attribute, creator, is_focus, system_name)
+            description, create_time, update_time, None, score_method, attribute, creator, is_focus, system_name, tickets)
 
         case Seq(
         JsString(tag_id), JsString(source_type), JsString(source_item), JsString(tag_name), JsString(sql), JsString(update_frequency),
@@ -76,7 +78,7 @@ object TDProtocol extends DefaultJsonProtocol {
         JsString(score_method), JsString(attribute), JsString(creator), JsBoolean(is_focus), JsString(system_name)) =>
           TagDictionary(
             tag_id, source_type, source_item, tagType, tag_name, sql, update_frequency, None, None,
-            description, create_time, update_time, Some(disable_flag), score_method, attribute, creator, is_focus, system_name)
+            description, create_time, update_time, Some(disable_flag), score_method, attribute, creator, is_focus, system_name, tickets)
 
         case Seq(
         JsString(tag_id), JsString(source_type), JsString(source_item), JsString(tag_name), JsString(sql), JsString(update_frequency),
@@ -84,7 +86,7 @@ object TDProtocol extends DefaultJsonProtocol {
         JsString(score_method), JsString(attribute), JsString(creator), JsBoolean(is_focus), JsString(system_name)) =>
           TagDictionary(
             tag_id, source_type, source_item, tagType, tag_name, sql, update_frequency, None, None,
-            description, create_time, update_time, None, score_method, attribute, creator, is_focus, system_name)
+            description, create_time, update_time, None, score_method, attribute, creator, is_focus, system_name, tickets)
 
         case _ => throw DeserializationException("Tag Dictionary Json formatted error.")
       }

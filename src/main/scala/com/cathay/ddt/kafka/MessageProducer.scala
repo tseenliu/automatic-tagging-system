@@ -58,38 +58,6 @@ class MessageProducer extends CalendarConverter {
     val record = KafkaProducerRecord(publishTopic, Some("tagKey"), s"${fMessage.toJson.prettyPrint}")
     producer.send(record)
     log.info(s"Tag(${ctd.update_frequency}) ID[${ctd.actorID}] is producing finished topic.")
-//    frequency match {
-//      case Daily =>
-//        val fMessage =
-//          TagFinishMessage(
-//            tagName,
-//            ctd.actorID,
-//            ctd.tag_name,
-//            s"${ctd.actorID}_$finishTime",
-//            ctd.update_frequency,
-//            getCurrentDate,
-//            durationTime,
-//            finishTime,
-//            is_success = true,
-//            messages)
-//        val record = KafkaProducerRecord(publishTopic, Some("tagKey"), s"${fMessage.toJson.prettyPrint}")
-//        producer.send(record)
-//      case Monthly =>
-//        val fMessage =
-//          TagFinishMessage(
-//            tagName,
-//            ctd.actorID,
-//            ctd.tag_name,
-//            s"${ctd.actorID}_$finishTime",
-//            ctd.update_frequency,
-//            getCurrentDate,
-//            durationTime,
-//            finishTime,
-//            is_success = true,
-//            messages)
-//        val record = KafkaProducerRecord(publishTopic, Some("tagKey"), s"${fMessage.toJson.prettyPrint}")
-//        producer.send(record)
-//    }
   }
 
 }

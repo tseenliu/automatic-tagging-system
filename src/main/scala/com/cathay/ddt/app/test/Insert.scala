@@ -1,6 +1,6 @@
 package com.cathay.ddt.app.test
 
-import com.cathay.ddt.db.MongoConnector
+import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import com.cathay.ddt.tagging.schema.{TagDictionary, TagType}
 
 /**
@@ -55,6 +55,7 @@ object Insert extends App {
 //
 //  }
 
+  import scala.concurrent.ExecutionContext.Implicits.global
   def randomString(length: Int) = scala.util.Random.alphanumeric.take(length).mkString
   for (i <- 1 to 2) {
     val neilYoung = TagDictionary(
@@ -89,11 +90,12 @@ object Insert extends App {
       attribute = "behavior",
       creator = "Roger",
       is_focus = true,
-      system_name = "ATS")
-//    FBsonCollection.flatMap( coll => MongoUtils.insert(coll, neilYoung) ).onSuccess {
-//      case result =>
-//        println(s"successfully or not: $result")
-//    }
+      system_name = "ATS",
+      tickets = List("aaa", "qweq"))
+    FBsonCollection.flatMap( coll => MongoUtils.insert(coll, neilYoung) ).onSuccess {
+      case result =>
+        println(s"successfully or not: $result")
+    }
   }
 
 
