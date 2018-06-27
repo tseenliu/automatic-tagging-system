@@ -1,7 +1,7 @@
 package com.cathay.ddt.app.test
 
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
-import com.cathay.ddt.tagging.schema.{TagDictionary, TagType}
+import com.cathay.ddt.tagging.schema.{CustomerDictionary, TagType}
 
 /**
   * Created by Tse-En on 2017/12/12.
@@ -58,7 +58,7 @@ object Insert extends App {
   import scala.concurrent.ExecutionContext.Implicits.global
   def randomString(length: Int) = scala.util.Random.alphanumeric.take(length).mkString
   for (i <- 1 to 2) {
-    val neilYoung = TagDictionary(
+    val neilYoung = CustomerDictionary(
       tag_id = randomString(20),
       source_type = "Alex",
       source_item = "信用卡/簽帳卡",

@@ -29,19 +29,19 @@ class TaggingRunner extends Actor with CalendarConverter{
       val startTime = getCalendar.getTimeInMillis/1000
       log.info(s"ActorRef: ${self} received Message by TagScheduler.")
       //sender tagState to produce start message
-      context.actorSelection(s"/user/tag-manager/${msg.instance.composeTd.actorID}") ! Report(Start, startTime, msg.instance.composeTd)
-      val command = Seq("/bin/bash", s"$runPath", "--job-name", s"${msg.instance.composeTd.tag_id}", "-p", s"$TMP_FILE_PATH${msg.instance.composeTd.tag_id}_$getCurrentDate")
+      context.actorSelection(s"/user/tag-manager/${msg.instance.composeCd.actorID}") ! Report(Start, startTime, msg.instance.composeCd)
+      val command = Seq("/bin/bash", s"$runPath", "--job-name", s"${msg.instance.composeCd.tag_id}", "-p", s"$TMP_FILE_PATH${msg.instance.composeCd.tag_id}_$getCurrentDate")
 
       val stdout = new StringBuilder
       val stderr = new StringBuilder
       val execute = command ! ProcessLogger(stdout append _ + "\n", stderr append _ + "\n")
 
-      val frequencyType = msg.instance.composeTd.update_frequency.toUpperCase()
+      val frequencyType = msg.instance.composeCd.update_frequency.toUpperCase()
       if(execute == 0) {
-        log.info(s"TagID[${msg.instance.composeTd.tag_id}] exit code: $execute")
+        log.info(s"TagID[${msg.instance.composeCd.tag_id}] exit code: $execute")
         context.parent ! CompleteInstance(Finish, startTime, msg.instance)
       }else {
-        log.error(s"TagID[${msg.instance.composeTd.tag_id}] exit code: $execute\n$stderr")
+        log.error(s"TagID[${msg.instance.composeCd.tag_id}] exit code: $execute\n$stderr")
         context.parent ! CompleteInstance(NonFinish, startTime, msg.instance)
       }
   }

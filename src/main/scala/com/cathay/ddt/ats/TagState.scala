@@ -129,7 +129,7 @@ object TagState {
   case class Receipt(tagMessage: TagMessage)
   case object Check
   case object Launch
-  case class Report(status:RunStatus, startTime:Long, dic: ComposeTD)
+  case class Report(status:RunStatus, startTime:Long, dic: ComposeCD)
   case object Stop
   case object GetStatus
   case object RevivalCheck
@@ -333,29 +333,15 @@ class TagState(frequency: String, id: String, schedulerActor: ActorRef) extends 
   when(Running) {
     case Event(Launch, _) =>
       val dic = Await.result(getDictionary, 10 second)
-      if(dic.started.isDefined && dic.traced.isDefined) {
-        freq match {
-          case "M" =>
-            val composeTd = getComposedSql(Monthly, dic)
-            schedulerActor ! Schedule(ScheduleInstance(composeTd))
-            stay()
-          case "D" =>
-            val composeTd = getComposedSql(Daily, dic)
-            schedulerActor ! Schedule(ScheduleInstance(composeTd))
-            stay()
-        }
-      }else {
-        // tag dic's started and traced is not Defined
-        freq match {
-          case "M" =>
-            val composeTd = getComposedSql(Monthly, dic)
-            schedulerActor ! Schedule(ScheduleInstance(composeTd))
-            stay()
-          case "D" =>
-            val composeTd = getComposedSql(Daily, dic)
-            schedulerActor ! Schedule(ScheduleInstance(composeTd))
-            stay()
-        }
+      freq match {
+        case "M" =>
+          val composeTd = getComposedSql(Monthly, dic)
+          schedulerActor ! Schedule(ScheduleInstance(composeTd))
+          stay()
+        case "D" =>
+          val composeTd = getComposedSql(Daily, dic)
+          schedulerActor ! Schedule(ScheduleInstance(composeTd))
+          stay()
       }
 
     case Event(Report(status, startTime, ctd), _) =>
@@ -385,7 +371,7 @@ class TagState(frequency: String, id: String, schedulerActor: ActorRef) extends 
       }
   }
   def updateAndCheck(ctd: Dictionary): PersistentFSM.State[TagState.State, Data, DomainEvent] = {
-    ctd.asInstanceOf[ComposeTD].update_frequency match {
+    ctd.asInstanceOf[ComposeCD].update_frequency match {
       case "M" =>
           goto(Verifying) applying UpdatedMessages(Monthly) andThen { _ =>
             saveStateSnapshot()
@@ -429,10 +415,6 @@ class TagState(frequency: String, id: String, schedulerActor: ActorRef) extends 
         goto(Receiving)
       }
 
-    //    case Event(Remove, _) =>
-    //      clearPersistentData()
-    //      stop()
-
   }
 
   def clearPersistentData(): Unit = {
@@ -440,53 +422,28 @@ class TagState(frequency: String, id: String, schedulerActor: ActorRef) extends 
     deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr = lastSequenceNr))
   }
 
-  def getDictionary: Future[TagDictionary] = {
+  def getDictionary: Future[CustomerDictionary] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     val query = BSONDocument("tag_id" -> id)
     MongoConnector.getTDCollection.flatMap(x => MongoUtils.findOneDictionary(x, query))
   }
 
-  def getComposedSql(frequencyType: FrequencyType, dic: TagDictionary): ComposeTD = {
-    if (dic.sql.contains("$")) {
-      val startDate = getStartDate(frequencyType, dic.started.get)
-      val endDate = getEndDate(frequencyType, startDate, dic.traced.get)
-      ComposeTD(
-        dic.tag_id,
-        dic.source_type,
-        dic.source_item,
-        dic.tag_type,
-        dic.tag_name,
-        dic.sql.replaceAll("\\$start_date", startDate).replaceAll("\\$end_date", endDate),
-        dic.update_frequency,
-        dic.started,
-        dic.traced,
-        dic.score_method,
-        dic.attribute,
-        Some(startDate),
-        Some(endDate),
-        getCurrentDate,
-        dic.system_name
-      )
-    }else {
-      ComposeTD(
-        dic.tag_id,
-        dic.source_type,
-        dic.source_item,
-        dic.tag_type,
-        dic.tag_name,
-        dic.sql,
-        dic.update_frequency,
-        dic.started,
-        dic.traced,
-        dic.score_method,
-        dic.attribute,
-        None,
-        None,
-        getCurrentDate,
-        dic.system_name
-      )
-    }
-
+  def getComposedSql(frequencyType: FrequencyType, dic: CustomerDictionary): ComposeCD = {
+    ComposeCD(
+      dic.segment_id,
+      dic.segment_type,
+      dic.segment_name,
+      dic.sql,
+      dic.update_frequency,
+      dic.detail,
+      dic.description,
+      dic.create_time,
+      dic.update_time,
+      dic.creator,
+      dic.is_focus,
+      dic.tickets,
+      getCurrentDate
+    )
   }
 
   whenUnhandled {

@@ -1,6 +1,6 @@
 package com.cathay.ddt.app.test
 
-import com.cathay.ddt.tagging.schema.{ComposeTD, QueryTD, TagDictionary, TagType}
+import com.cathay.ddt.tagging.schema.{ComposeCD, QueryCD, CustomerDictionary, TagType}
 import com.cathay.ddt.utils.HdfsClient
 import spray.json._
 
@@ -8,7 +8,7 @@ object HdfsTest extends App {
 
   // tag output
   def randomString(length: Int) = scala.util.Random.alphanumeric.take(length).mkString
-  val neilYoung1 = TagDictionary(
+  val neilYoung1 = CustomerDictionary(
     tag_id = randomString(20),
     source_type = "bank",
     source_item = "信用卡/簽帳卡",
@@ -42,7 +42,7 @@ object HdfsTest extends App {
     system_name = "ATS",
     tickets = List("aaa", "fvv"))
 
-  val neilYoung = ComposeTD(
+  val neilYoung = ComposeCD(
     tag_id = randomString(20),
     source_type = "bank",
     source_item = "信用卡/簽帳卡",
@@ -77,7 +77,7 @@ object HdfsTest extends App {
   import com.cathay.ddt.tagging.protocal.TDProtocol._
   val json2 = neilYoung1.toJson
   println(json2.prettyPrint)
-  val json3 = json2.convertTo[TagDictionary]
+  val json3 = json2.convertTo[CustomerDictionary]
   println(json3.tickets)
 
 //  // test2

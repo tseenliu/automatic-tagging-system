@@ -11,7 +11,7 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.ExceptionHandler
 import com.cathay.ddt.ats.TagManager._
-import com.cathay.ddt.tagging.schema.{DynamicTD, QueryTD, TagDictionary}
+import com.cathay.ddt.tagging.schema.{DynamicCD, QueryCD, CustomerDictionary}
 import com.cathay.ddt.utils.EnvLoader
 import reactivemongo.bson.BSONDocument
 
@@ -27,26 +27,19 @@ trait ApiRoute extends EnvLoader{
   implicit val materializer: Materializer
   implicit val ec: ExecutionContext
 
-  implicit def convertTD(dtd: DynamicTD): TagDictionary = {
-    TagDictionary(
-      dtd.tag_id.get,
-      dtd.source_type.get,
-      dtd.source_item.get,
-      dtd.tag_type.get,
-      dtd.tag_name.get,
+  implicit def convertTD(dtd: DynamicCD): CustomerDictionary = {
+    CustomerDictionary(
+      dtd.segment_id.get,
+      dtd.segment_type.get,
+      dtd.segment_name.get,
       dtd.sql.get,
       dtd.update_frequency.get,
-      dtd.started,
-      dtd.traced,
+      dtd.detail.get,
       dtd.description.get,
       dtd.create_time.get,
       dtd.update_time.get,
-      dtd.disable_flag,
-      dtd.score_method.get,
-      dtd.attribute.get,
       dtd.creator.get,
       dtd.is_focus.get,
-      dtd.system_name.get,
       dtd.tickets.get
     )
   }
@@ -73,18 +66,18 @@ trait ApiRoute extends EnvLoader{
       import com.cathay.ddt.tagging.protocal.DynamicTDProtocol._
       pathEnd {
         // write operation
-        (post & entity(as[DynamicTD])) { td =>
+        (post & entity(as[DynamicCD])) { td =>
           onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.insert(coll, td))) {
             case true =>
-              log.info(s"Request to insert tagID[${td.tag_id}].")
+              log.info(s"Request to insert tagID[${td.actorID}].")
               tagManagerSelection ! Cmd(Load(convertTD(td)))
               Thread.sleep(500)
               tagManagerSelection ! Cmd(ShowState)
               complete(StatusCodes.OK, JsObject(
-                "message" -> JsString(s"tagID[${td.tag_id}] insert successfully.")
+                "message" -> JsString(s"tagID[${td.actorID}] insert successfully.")
               ))
             case false =>
-              log.error(s"Request to insert tagID[${td.tag_id}].")
+              log.error(s"Request to insert tagID[${td.actorID}].")
               complete(StatusCodes.BadRequest, JsObject(
                 "message" -> JsString("tagID[${td.tag_id}] insert failed.")
               ))
@@ -95,19 +88,19 @@ trait ApiRoute extends EnvLoader{
       // update operation
       path(Segment) { id =>
         put {
-          entity(as[DynamicTD]) { td =>
+          entity(as[DynamicCD]) { td =>
             val query = BSONDocument("tag_id" -> id)
             onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.update(coll, query, td))) {
               case true =>
-                log.info(s"Request to update tagID[${td.tag_id}].")
+                log.info(s"Request to update tagID[${td.actorID}].")
                 tagManagerSelection ! Cmd(Update(convertTD(td)))
                 Thread.sleep(500)
                 tagManagerSelection ! Cmd(ShowState)
                 complete(StatusCodes.OK, JsObject(
-                  "message" -> JsString(s"tagID[${td.tag_id}] update successfully.")
+                  "message" -> JsString(s"tagID[${td.actorID}] update successfully.")
                 ))
               case false =>
-                log.error(s"Request to update tagID[${td.tag_id}].")
+                log.error(s"Request to update tagID[${td.actorID}].")
                 complete(StatusCodes.BadRequest, JsObject(
                   "message" -> JsString("tagID[${td.tag_id}] update failed.")
                 ))
@@ -119,7 +112,7 @@ trait ApiRoute extends EnvLoader{
         // find operation
         path("search") {
           import com.cathay.ddt.tagging.protocal.QueryTDProtocol._
-          (post & entity(as[QueryTD])) { dtd =>
+          (post & entity(as[QueryCD])) { dtd =>
             complete {
               log.info(s"Request to search $dtd.")
               OK -> MongoConnector.getTDCollection.flatMap(coll => MongoUtils.findDictionaries(coll, dtd))
@@ -140,7 +133,7 @@ trait ApiRoute extends EnvLoader{
         (delete & path(Segment)) { id =>
           val query = BSONDocument("tag_id" -> id)
           onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.findOneDictionary(coll, query))){
-            case m: TagDictionary =>
+            case m: CustomerDictionary =>
               onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.remove(coll, BSONDocument("tag_id" -> id)))) {
                 case true =>
                   log.info(s"Request to remove tagID[$id].")
@@ -180,7 +173,7 @@ trait ApiRoute extends EnvLoader{
         import com.cathay.ddt.tagging.protocal.DynamicTDProtocol._
         pathEnd {
           // write operation
-          (post & entity(as[DynamicTD])) { td =>
+          (post & entity(as[DynamicCD])) { td =>
             onSuccess(MongoConnector.getHTDCollection.flatMap(coll => MongoUtils.insert(coll, td))) {
               case true =>
                 log.info(s"Request to insert tagID[${td.tag_id}].")
@@ -200,7 +193,7 @@ trait ApiRoute extends EnvLoader{
           // update operation
           path(Segment) { id =>
             put {
-              entity(as[DynamicTD]) { td =>
+              entity(as[DynamicCD]) { td =>
                 val query = BSONDocument("tag_id" -> id)
                 onSuccess(MongoConnector.getHTDCollection.flatMap(coll => MongoUtils.update(coll, query, td))) {
                   case true =>
@@ -222,7 +215,7 @@ trait ApiRoute extends EnvLoader{
           // find operation
           path("search") {
             import com.cathay.ddt.tagging.protocal.QueryTDProtocol._
-            (post & entity(as[QueryTD])) { dtd =>
+            (post & entity(as[QueryCD])) { dtd =>
               complete {
                 log.info(s"Request to search $dtd.")
                 OK -> MongoConnector.getHTDCollection.flatMap(coll => MongoUtils.findDictionaries(coll, dtd))
@@ -243,7 +236,7 @@ trait ApiRoute extends EnvLoader{
           (delete & path(Segment)) { id =>
             val query = BSONDocument("tag_id" -> id)
             onSuccess(MongoConnector.getHTDCollection.flatMap(coll => MongoUtils.findOneDictionary(coll, query))){
-              case m: TagDictionary =>
+              case m: CustomerDictionary =>
                 onSuccess(MongoConnector.getHTDCollection.flatMap(coll => MongoUtils.remove(coll, BSONDocument("tag_id" -> id)))) {
                   case true =>
                     log.info(s"Request to remove tagID[$id].")

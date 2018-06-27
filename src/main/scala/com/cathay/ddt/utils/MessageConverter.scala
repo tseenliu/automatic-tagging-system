@@ -2,7 +2,7 @@ package com.cathay.ddt.utils
 
 import com.cathay.ddt.kafka.{FrontierMessage, FinishMessage}
 import com.cathay.ddt.tagging.schema.TagMessage.{Message, SimpleTagMessage}
-import com.cathay.ddt.tagging.schema.{TagDictionary, TagMessage}
+import com.cathay.ddt.tagging.schema.{CustomerDictionary, TagMessage}
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
@@ -38,7 +38,7 @@ object MessageConverter extends CalendarConverter {
   }
 
   // Convert to tagMessages using a mapping table
-  def CovertTagMessage(doc: TagDictionary): Unit = { }
+  def CovertTagMessage(doc: CustomerDictionary): Unit = { }
 
 
   // Convert frontier messages to tagMessages

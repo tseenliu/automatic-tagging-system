@@ -1,6 +1,6 @@
 package com.cathay.ddt.db
 
-import com.cathay.ddt.tagging.schema.{DynamicTD, QueryTD, TagDictionary}
+import com.cathay.ddt.tagging.schema.{DynamicCD, QueryCD, CustomerDictionary}
 import org.slf4j.LoggerFactory
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.commands.WriteResult
@@ -31,9 +31,9 @@ object MongoUtils extends TagDictionaryExtension {
   }
 
   // For insert test
-  def insert(coll: BSONCollection, td: TagDictionary): Future[Boolean] = {
-    implicit val reader = Macros.reader[TagDictionary]
-    implicit val writer = Macros.writer[TagDictionary]
+  def insert(coll: BSONCollection, td: CustomerDictionary): Future[Boolean] = {
+    implicit val reader = Macros.reader[CustomerDictionary]
+    implicit val writer = Macros.writer[CustomerDictionary]
     val writeRes: Future[WriteResult] = coll.insert(td)
     writeRes.onComplete { // Dummy callbacks
       case Failure(e) => log.error(s"${e.printStackTrace().toString}")
@@ -42,8 +42,8 @@ object MongoUtils extends TagDictionaryExtension {
     writeRes.map(_.ok)
   }
 
-  def insert(coll: BSONCollection, td: DynamicTD): Future[Boolean] = {
-    implicit val dynamicTDHandler = Macros.handler[DynamicTD]
+  def insert(coll: BSONCollection, td: DynamicCD): Future[Boolean] = {
+    implicit val dynamicTDHandler = Macros.handler[DynamicCD]
     val writeRes: Future[WriteResult] = coll.insert(td)
     writeRes.onComplete { // Dummy callbacks
       case Failure(e) => log.error(s"${e.printStackTrace().toString}")
@@ -52,9 +52,9 @@ object MongoUtils extends TagDictionaryExtension {
     writeRes.map(_.ok)
   }
 
-  def update(coll: BSONCollection, selector: BSONDocument, modifier: DynamicTD): Future[Boolean] = {
+  def update(coll: BSONCollection, selector: BSONDocument, modifier: DynamicCD): Future[Boolean] = {
     // get a future update
-    implicit val dynamicTDHandler = Macros.handler[DynamicTD]
+    implicit val dynamicTDHandler = Macros.handler[DynamicCD]
     val futureUpdate = coll.update(selector, modifier)
 
     futureUpdate.onComplete { // Dummy callbacks
@@ -64,13 +64,13 @@ object MongoUtils extends TagDictionaryExtension {
     futureUpdate.map(result => result.ok)
   }
 
-  def updateFind(collection: BSONCollection, selector: BSONDocument, modifier: TagDictionary): Future[Option[TagDictionary]] = {
+  def updateFind(collection: BSONCollection, selector: BSONDocument, modifier: CustomerDictionary): Future[Option[CustomerDictionary]] = {
     import collection.BatchCommands.FindAndModifyCommand.FindAndModifyResult
 
     val result: Future[FindAndModifyResult] = collection.findAndUpdate(
       selector, modifier, fetchNewObject = true, upsert = true)
 
-    result.map(x => x.result[TagDictionary])
+    result.map(x => x.result[CustomerDictionary])
   }
 
   /* Remove Documents */
@@ -85,20 +85,20 @@ object MongoUtils extends TagDictionaryExtension {
   }
 
   /* Find Documents */
-  def findDictionaries(collection: BSONCollection, query: BSONDocument)(implicit ec: ExecutionContext): Future[List[TagDictionary]] = {
+  def findDictionaries(collection: BSONCollection, query: BSONDocument)(implicit ec: ExecutionContext): Future[List[CustomerDictionary]] = {
 //    implicit val reader = Macros.reader[TagDictionary]
-    collection.find(query).cursor[TagDictionary]().collect[List]()
+    collection.find(query).cursor[CustomerDictionary]().collect[List]()
   }
 
-  def findDictionaries(collection: BSONCollection, query: QueryTD)(implicit ec: ExecutionContext): Future[List[TagDictionary]] = {
+  def findDictionaries(collection: BSONCollection, query: QueryCD)(implicit ec: ExecutionContext): Future[List[CustomerDictionary]] = {
     //    implicit val reader = Macros.reader[TagDictionary]
-    implicit val queryTDHandler = Macros.handler[QueryTD]
-    collection.find(query).cursor[TagDictionary]().collect[List]()
+    implicit val queryTDHandler = Macros.handler[QueryCD]
+    collection.find(query).cursor[CustomerDictionary]().collect[List]()
   }
 
-  def findOneDictionary(collection: BSONCollection, query: BSONDocument)(implicit ec: ExecutionContext): Future[TagDictionary] = {
+  def findOneDictionary(collection: BSONCollection, query: BSONDocument)(implicit ec: ExecutionContext): Future[CustomerDictionary] = {
 //    implicit val reader = Macros.reader[TagDictionary]
-    collection.find(query).requireOne[TagDictionary]
+    collection.find(query).requireOne[CustomerDictionary]
   }
 
 }

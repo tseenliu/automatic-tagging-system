@@ -10,7 +10,7 @@ import akka.actor.SupervisorStrategy.{Stop, _}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import com.cathay.ddt.kafka.MessageConsumer
-import com.cathay.ddt.tagging.schema.{TagDictionary, TagMessage}
+import com.cathay.ddt.tagging.schema.{CustomerDictionary, TagMessage}
 import com.cathay.ddt.tagging.schema.TagMessage.Message
 import com.cathay.ddt.ats.TagState._
 import com.cathay.ddt.utils.{CalendarConverter, EnvLoader, MessageConverter}
@@ -48,18 +48,18 @@ object TagManager extends EnvLoader {
 
   // TagManager State Operation
   sealed trait ManagerCommand
-  case class Load(doc: TagDictionary) extends ManagerCommand
-  case class Register(doc: TagDictionary) extends ManagerCommand
+  case class Load(doc: CustomerDictionary) extends ManagerCommand
+  case class Register(doc: CustomerDictionary) extends ManagerCommand
   case class StopTag(id: String) extends ManagerCommand
   case class Remove(id: String) extends ManagerCommand
-  case class Update(doc: TagDictionary) extends ManagerCommand
+  case class Update(doc: CustomerDictionary) extends ManagerCommand
   case object GetTagStatus extends ManagerCommand
   case object ShowState extends ManagerCommand
   case class TimeChecker(time: String) extends ManagerCommand
 
 
   sealed trait ManagerOperation
-  case class TagRegister(tagDic: TagDictionary) extends ManagerOperation
+  case class TagRegister(tagDic: CustomerDictionary) extends ManagerOperation
   case class TagMesAdded(id: String, tagMessage: Message) extends ManagerOperation
   case class TagInsActorCreated(ti: TagInstance, actorRef: ActorRef) extends ManagerOperation
   case class TagInsStopped(id: String) extends ManagerOperation
@@ -79,7 +79,7 @@ object TagManager extends EnvLoader {
     def count: Int = state.size
     def getTMs(ti: TagInstance): Set[Message] = state(ti)
     def getTIs: Set[TagInstance] = state.keySet
-    def register(tagDic: TagDictionary): TIsRegistry =
+    def register(tagDic: CustomerDictionary): TIsRegistry =
       TIsRegistry(state + (TagInstance(tagDic.update_frequency.toUpperCase, tagDic.actorID) -> Set()))
 
     def getTI(id: String): Option[TagInstance] = {
@@ -181,8 +181,8 @@ object TagManager extends EnvLoader {
   }
 
   case class State(tagInstReg: TIsRegistry, tagMesReg: TMsRegistry) {
-    def register(tagDic: TagDictionary): State = State(tagInstReg.register(tagDic), tagMesReg)
-    def contains(tagDic: TagDictionary): Boolean = tagInstReg.contains(tagDic.actorID)
+    def register(tagDic: CustomerDictionary): State = State(tagInstReg.register(tagDic), tagMesReg)
+    def contains(tagDic: CustomerDictionary): Boolean = tagInstReg.contains(tagDic.actorID)
     def contains(message: Message): Boolean = tagMesReg.contains(message)
     def getTIs(message: Message): Set[TagInstance] = tagMesReg.getTIs(message)
     def getTIs: Set[TagInstance] = tagInstReg.getTIs

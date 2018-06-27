@@ -1,6 +1,6 @@
 package com.cathay.ddt.db
 
-import com.cathay.ddt.tagging.schema.{TagDictionary, TagType}
+import com.cathay.ddt.tagging.schema.{CustomerDictionary, TagType}
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader, BSONDocumentWriter, Macros}
 
 class TagDictionaryExtension {
@@ -23,8 +23,8 @@ class TagDictionaryExtension {
   }
 
 
-  implicit object TDWriter extends BSONDocumentWriter[TagDictionary] {
-    def write(td: TagDictionary): BSONDocument = BSONDocument(
+  implicit object TDWriter extends BSONDocumentWriter[CustomerDictionary] {
+    def write(td: CustomerDictionary): BSONDocument = BSONDocument(
       "tag_id" -> td.tag_id,
       "source_type" -> td.source_type,
       "source_item" -> td.source_item,
@@ -46,8 +46,8 @@ class TagDictionaryExtension {
       "tickets" -> td.tickets)
   }
 
-  implicit object TDReader extends BSONDocumentReader[TagDictionary] {
-    def read(doc: BSONDocument): TagDictionary = TagDictionary(
+  implicit object TDReader extends BSONDocumentReader[CustomerDictionary] {
+    def read(doc: BSONDocument): CustomerDictionary = CustomerDictionary(
       doc.getAs[String]("tag_id").get,
       doc.getAs[String]("source_type").get,
       doc.getAs[String]("source_item").get,

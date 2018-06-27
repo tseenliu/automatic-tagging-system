@@ -1,9 +1,8 @@
 package com.cathay.ddt.tagging.protocal
 
-import com.cathay.ddt.tagging.schema.{DynamicTD, TagType}
+import com.cathay.ddt.tagging.schema.DynamicCD
 import spray.json.DefaultJsonProtocol
 
 object DynamicTDProtocol extends DefaultJsonProtocol {
-  implicit val tagTypeFormat = jsonFormat2(TagType)
-  implicit val dynamicTDFormat = jsonFormat19(DynamicTD)
+  implicit val dynamicTDFormat = jsonFormat12(DynamicCD)
 }
