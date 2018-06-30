@@ -13,17 +13,6 @@ import scala.concurrent.duration._
   */
 class TimerActor extends Actor {
 
-//  def setTimer()(implicit ec: ExecutionContext): Future[Boolean] = Future {
-//      var flag = true
-//      while(flag) {
-//        if (new SimpleDateFormat("HH:mm:ss.SSS").format(Calendar.getInstance().getTime).compareTo("10:14:00.000") == 0) {
-//          Thread.sleep(1000)
-//          flag = false
-//        }
-//      }
-//    flag
-//  }
-
   override def preStart(): Unit = {
     context.system.scheduler.schedule(0 seconds, 1 seconds, self, "yes")
     println(s"[Info] Tag is already serving...")

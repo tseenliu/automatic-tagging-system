@@ -67,7 +67,7 @@ class TagScheduler extends Actor with CalendarConverter {
 
     case Schedule(instance) =>
       import scala.concurrent.ExecutionContext.Implicits.global
-      log.info(s"[Info] TagScheduler is received: Tag(${instance.composeCd.update_frequency}) ID[${instance.composeCd.actorID}]")
+      log.info(s"[Info] TagScheduler is received: Segment(${instance.composeCd.update_frequency}) ID[${instance.composeCd.actorID}]")
 
       val tdJson = instance.composeCd.toJson
       HdfsClient.getClient.write(fileName = s"${instance.composeCd.actorID}_$getCurrentDate", data = tdJson.compactPrint.getBytes)

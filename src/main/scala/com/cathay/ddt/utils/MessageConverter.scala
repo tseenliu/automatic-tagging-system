@@ -56,24 +56,26 @@ object MessageConverter extends CalendarConverter {
     }
   }
 
+  // Convert finish messages to tagMessages
+  def CovertToTM(topic: String, input: FinishMessage): TagMessage = {
+    TagMessage(Some(topic), input.update_frequency.toUpperCase(), input.tag_id, Some("segment_id"), Some(input.tag_id), Some(input.finish_time))
+  }
+
   // parsing sql and get require value
   def getMessages(sql: String): Iterator[Message] = {
-    val tablePattern = "(VP_BANK|vp_bank)\\.([a-z\\-\\_A-Z0-9]+)".r
-    val matches = tablePattern.findAllIn(sql)
     //    val tagPattern = s"""([tag_id\\s]+)\\=(["'\\s]+)([\\-\\_a-zA-Z0-9]+)(["'\\s]+)""".r
-    //    val matches = tagPattern.findAllIn(sql)
+    val tagPattern = s"""(tag_id)(["'\\s\\=]+)([\\-\\_a-zA-Z0-9]+)(["']+)""".r
+    val matches = tagPattern.findAllIn(sql)
+
     val map = getSqlMTable
     var set = scala.collection.mutable.Set[Message]()
-//    matches.foreach{ x =>
-//      val tagPattern(a,b,c,d) = x
-//      set += map(c)
-//    }
+
     matches.foreach{ x =>
-      val table = x.trim.split("\\.")(1)
+      val tagPattern(_,_,id,_) = x
       try {
-        set += map(table)
+        set += map(id)
       }catch {
-        case keyNotFound: NoSuchElementException => log.error(s"view table $table: $keyNotFound")
+        case keyNotFound: NoSuchElementException => log.error(s"tag id $id: $keyNotFound")
         case e: Throwable => log.error(s"${e.getMessage}")
       }
     }
@@ -82,8 +84,8 @@ object MessageConverter extends CalendarConverter {
 
   def getSqlMTable: Map[String, Message] = {
     if (sqlMTable.isEmpty) {
-      initialADW()
-//      initialFromLocal()
+//      initialADW()
+      initialFromLocal()
       sqlMTable
     } else {
       sqlMTable
@@ -92,8 +94,8 @@ object MessageConverter extends CalendarConverter {
 
   def getKafkaMTable: Map[String, String] = {
     if (kafkaMTable.isEmpty) {
-      initialADW()
-//      initialFromLocal()
+//      initialADW()
+      initialFromLocal()
       kafkaMTable
     } else {
       kafkaMTable
@@ -102,18 +104,11 @@ object MessageConverter extends CalendarConverter {
 
   def initialFromLocal(): Unit = {
     sqlMTable = Map()
-    kafkaMTable = Map()
     for (line <- Source.fromFile(mappingFilePath).getLines) {
-      val record = line.trim.split(",")
-      val key = record(0)
-      val value = record(1)
-      val par = if(record(2) == "no") None else Some(record(2))
-      val tmp = value.split(" ")
-      kafkaMList += ((tmp(0), tmp(1)))
-      sqlMList += ((key, SimpleTagMessage(tmp(1), tmp(0), par)))
+      val record = line.trim.split(",").map(_.trim)
+      sqlMList += ((record(0), SimpleTagMessage(record(1), record(0).trim, Some(record(2)))))
     }
     sqlMTable = sqlMList.toMap
-    kafkaMTable = kafkaMList.toMap
   }
 
   def initialADW(): Unit = {

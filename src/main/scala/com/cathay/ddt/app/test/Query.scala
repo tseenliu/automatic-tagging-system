@@ -1,7 +1,6 @@
 package com.cathay.ddt.app.test
 
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
-import com.cathay.ddt.tagging.schema.TagType
 import reactivemongo.bson._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -18,7 +17,6 @@ object Query extends App {
 
 
   val query3 = BSONDocument("tag_name" -> "超市購物")
-  val tmpList = List(TagType("D", "d"), TagType("D", "d"))
 
 
 //  val query = BSONDocument("tag_type" -> BSONDocument("type_L1" -> "D", "type_L2" -> "d"))

@@ -52,7 +52,7 @@ trait ApiRoute extends EnvLoader{
       extractUri { uri =>
         log.warn(s"Request to $uri could not be handled normally")
         complete(StatusCodes.BadRequest, JsObject(
-          "message" -> JsString(s"tagID is not exist.")
+          "message" -> JsString(s"SegmentID is not exist.")
         ))
       }
   }
@@ -69,17 +69,17 @@ trait ApiRoute extends EnvLoader{
         (post & entity(as[DynamicCD])) { td =>
           onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.insert(coll, td))) {
             case true =>
-              log.info(s"Request to insert tagID[${td.actorID}].")
+              log.info(s"Request to insert SegmentID[${td.actorID}].")
               tagManagerSelection ! Cmd(Load(convertTD(td)))
               Thread.sleep(500)
               tagManagerSelection ! Cmd(ShowState)
               complete(StatusCodes.OK, JsObject(
-                "message" -> JsString(s"tagID[${td.actorID}] insert successfully.")
+                "message" -> JsString(s"SegmentID[${td.actorID}] insert successfully.")
               ))
             case false =>
-              log.error(s"Request to insert tagID[${td.actorID}].")
+              log.error(s"Request to insert SegmentID[${td.actorID}].")
               complete(StatusCodes.BadRequest, JsObject(
-                "message" -> JsString("tagID[${td.tag_id}] insert failed.")
+                "message" -> JsString(s"SegmentID[${td.actorID}] insert failed.")
               ))
           }
         }
@@ -89,20 +89,20 @@ trait ApiRoute extends EnvLoader{
       path(Segment) { id =>
         put {
           entity(as[DynamicCD]) { td =>
-            val query = BSONDocument("tag_id" -> id)
+            val query = BSONDocument("segment_id" -> id)
             onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.update(coll, query, td))) {
               case true =>
-                log.info(s"Request to update tagID[${td.actorID}].")
+                log.info(s"Request to update SegmentID[${td.actorID}].")
                 tagManagerSelection ! Cmd(Update(convertTD(td)))
                 Thread.sleep(500)
                 tagManagerSelection ! Cmd(ShowState)
                 complete(StatusCodes.OK, JsObject(
-                  "message" -> JsString(s"tagID[${td.actorID}] update successfully.")
+                  "message" -> JsString(s"SegmentID[${td.actorID}] update successfully.")
                 ))
               case false =>
-                log.error(s"Request to update tagID[${td.actorID}].")
+                log.error(s"Request to update SegmentID[${td.actorID}].")
                 complete(StatusCodes.BadRequest, JsObject(
-                  "message" -> JsString("tagID[${td.tag_id}] update failed.")
+                  "message" -> JsString("SegmentID[${td.tag_id}] update failed.")
                 ))
             }
           }
@@ -122,8 +122,8 @@ trait ApiRoute extends EnvLoader{
         } ~
         (get & path(Segment)) { id =>
           complete {
-            log.info(s"Request to find tagID[$id].")
-            val query = BSONDocument("tag_id" -> id)
+            log.info(s"Request to find SegmentID[$id].")
+            val query = BSONDocument("segment_id" -> id)
             val TD = MongoConnector.getTDCollection.flatMap(coll => MongoUtils.findOneDictionary(coll, query))
             OK -> TD
           }
@@ -131,28 +131,28 @@ trait ApiRoute extends EnvLoader{
         } ~
         // remove operation
         (delete & path(Segment)) { id =>
-          val query = BSONDocument("tag_id" -> id)
+          val query = BSONDocument("segment_id" -> id)
           onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.findOneDictionary(coll, query))){
             case m: CustomerDictionary =>
-              onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.remove(coll, BSONDocument("tag_id" -> id)))) {
+              onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.remove(coll, BSONDocument("segment_id" -> id)))) {
                 case true =>
-                  log.info(s"Request to remove tagID[$id].")
+                  log.info(s"Request to remove SegmentID[$id].")
                   tagManagerSelection ! Cmd(Remove(id))
                   Thread.sleep(500)
                   tagManagerSelection ! Cmd(ShowState)
                   complete(StatusCodes.OK, JsObject(
-                    "message" -> JsString(s"tagID[${id}] remove successfully.")
+                    "message" -> JsString(s"SegmentID[${id}] remove successfully.")
                   ))
                 case false =>
-                  log.error(s"Request to remove tagID[$id].")
+                  log.error(s"Request to remove SegmentID[$id].")
                   complete(StatusCodes.BadRequest, JsObject(
-                    "message" -> JsString(s"tagID[${id}] remove failed.")
+                    "message" -> JsString(s"SegmentID[${id}] remove failed.")
                   ))
               }
             case _ =>
-              log.error(s"Request to remove tagID[$id].")
+              log.error(s"Request to remove SegmentID[$id].")
               complete(StatusCodes.BadRequest, JsObject(
-                "message" -> JsString(s"tagID[${id}] remove failed.")
+                "message" -> JsString(s"SegmentID[${id}] remove failed.")
               ))
           }
         } ~
@@ -176,15 +176,15 @@ trait ApiRoute extends EnvLoader{
           (post & entity(as[DynamicCD])) { td =>
             onSuccess(MongoConnector.getHTDCollection.flatMap(coll => MongoUtils.insert(coll, td))) {
               case true =>
-                log.info(s"Request to insert tagID[${td.tag_id}].")
+                log.info(s"Request to insert SegmentID[${td.actorID}].")
                 tagManagerSelection ! Cmd(Load(convertTD(td)))
                 complete(StatusCodes.OK, JsObject(
-                  "message" -> JsString(s"tagID[${td.tag_id}] insert successfully.")
+                  "message" -> JsString(s"SegmentID[${td.actorID}] insert successfully.")
                 ))
               case false =>
-                log.error(s"Request to insert tagID[${td.tag_id}].")
+                log.error(s"Request to insert SegmentID[${td.actorID}].")
                 complete(StatusCodes.BadRequest, JsObject(
-                  "message" -> JsString("tagID[${td.tag_id}] insert failed.")
+                  "message" -> JsString("SegmentID[${td.tag_id}] insert failed.")
                 ))
             }
           }
@@ -194,18 +194,18 @@ trait ApiRoute extends EnvLoader{
           path(Segment) { id =>
             put {
               entity(as[DynamicCD]) { td =>
-                val query = BSONDocument("tag_id" -> id)
+                val query = BSONDocument("segment_id" -> id)
                 onSuccess(MongoConnector.getHTDCollection.flatMap(coll => MongoUtils.update(coll, query, td))) {
                   case true =>
-                    log.info(s"Request to update tagID[${td.tag_id}].")
+                    log.info(s"Request to update SegmentID[${td.actorID}].")
                     tagManagerSelection ! Cmd(Update(convertTD(td)))
                     complete(StatusCodes.OK, JsObject(
-                      "message" -> JsString(s"tagID[${td.tag_id}] update successfully.")
+                      "message" -> JsString(s"SegmentID[${td.actorID}] update successfully.")
                     ))
                   case false =>
-                    log.error(s"Request to update tagID[${td.tag_id}].")
+                    log.error(s"Request to update SegmentID[${td.actorID}].")
                     complete(StatusCodes.BadRequest, JsObject(
-                      "message" -> JsString("tagID[${td.tag_id}] update failed.")
+                      "message" -> JsString(s"SegmentID[${td.actorID}] update failed.")
                     ))
                 }
               }
@@ -225,8 +225,8 @@ trait ApiRoute extends EnvLoader{
           } ~
           (get & path(Segment)) { id =>
             complete {
-              log.info(s"Request to find tagID[$id].")
-              val query = BSONDocument("tag_id" -> id)
+              log.info(s"Request to find SegmentID[$id].")
+              val query = BSONDocument("segment_id" -> id)
               val TD = MongoConnector.getHTDCollection.flatMap(coll => MongoUtils.findOneDictionary(coll, query))
               OK -> TD
             }
@@ -234,26 +234,26 @@ trait ApiRoute extends EnvLoader{
           } ~
           // remove operation
           (delete & path(Segment)) { id =>
-            val query = BSONDocument("tag_id" -> id)
+            val query = BSONDocument("segment_id" -> id)
             onSuccess(MongoConnector.getHTDCollection.flatMap(coll => MongoUtils.findOneDictionary(coll, query))){
               case m: CustomerDictionary =>
-                onSuccess(MongoConnector.getHTDCollection.flatMap(coll => MongoUtils.remove(coll, BSONDocument("tag_id" -> id)))) {
+                onSuccess(MongoConnector.getHTDCollection.flatMap(coll => MongoUtils.remove(coll, BSONDocument("segment_id" -> id)))) {
                   case true =>
-                    log.info(s"Request to remove tagID[$id].")
+                    log.info(s"Request to remove SegmentID[$id].")
                     tagManagerSelection ! Cmd(Remove(id))
                     complete(StatusCodes.OK, JsObject(
-                      "message" -> JsString(s"tagID[${id}] remove successfully.")
+                      "message" -> JsString(s"SegmentID[${id}] remove successfully.")
                     ))
                   case false =>
-                    log.error(s"Request to remove tagID[$id].")
+                    log.error(s"Request to remove SegmentID[$id].")
                     complete(StatusCodes.BadRequest, JsObject(
-                      "message" -> JsString(s"tagID[${id}] remove failed.")
+                      "message" -> JsString(s"SegmentID[${id}] remove failed.")
                     ))
                 }
               case _ =>
-                log.error(s"Request to remove tagID[$id].")
+                log.error(s"Request to remove SegmentID[$id].")
                 complete(StatusCodes.BadRequest, JsObject(
-                  "message" -> JsString(s"tagID[${id}] remove failed.")
+                  "message" -> JsString(s"SegmentID[${id}] remove failed.")
                 ))
             }
           } ~

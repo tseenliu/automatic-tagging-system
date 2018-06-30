@@ -14,7 +14,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 /**
   * Created by Tse-En on 2017/12/12.
   */
-object MongoUtils extends TagDictionaryExtension {
+object MongoUtils extends CustomerDictionaryExtension {
 
   val log = LoggerFactory.getLogger(this.getClass)
 

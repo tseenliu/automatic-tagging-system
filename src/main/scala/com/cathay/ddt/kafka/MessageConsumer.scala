@@ -30,7 +30,8 @@ class MessageConsumer extends Actor with EnvLoader {
   private val subscribeTopics: Array[String] = kafkaConfig.getStringList("tag.subscribe-topics").toArray().map(_.toString)
   private val publishTopic = kafkaConfig.getString("tag.finishmsg-topic")
 
-  val frontier = subscribeTopics.toSet -- Set(publishTopic)
+  val frontier = subscribeTopics.toSet
+//  val frontier = subscribeTopics.toSet -- Set(publishTopic)
 
   // Records' type of [key, value]
   val recordsExt: Extractor[Any, ConsumerRecords[String, String]] = ConsumerRecords.extractor[String, String]
@@ -63,7 +64,7 @@ class MessageConsumer extends Actor with EnvLoader {
         r.topic() match {
           case m if frontier.contains(m) =>
             log.info(s"MessageConsumer is received: ${r.value()} from [$m] topic.")
-            val message: FrontierMessage = r.value().parseJson.convertTo[FrontierMessage]
+            val message: FinishMessage = r.value().parseJson.convertTo[FinishMessage]
             val tagMessage = MessageConverter.CovertToTM(r.topic(), message)
             context.parent ! tagMessage
         }

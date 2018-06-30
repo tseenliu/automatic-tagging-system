@@ -1,7 +1,7 @@
 package com.cathay.ddt.app.test
 
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
-import com.cathay.ddt.tagging.schema.{CustomerDictionary, TagType}
+import com.cathay.ddt.tagging.schema.{CustomerDictionary}
 
 /**
   * Created by Tse-En on 2017/12/12.
@@ -57,46 +57,46 @@ object Insert extends App {
 
   import scala.concurrent.ExecutionContext.Implicits.global
   def randomString(length: Int) = scala.util.Random.alphanumeric.take(length).mkString
-  for (i <- 1 to 2) {
-    val neilYoung = CustomerDictionary(
-      tag_id = randomString(20),
-      source_type = "Alex",
-      source_item = "信用卡/簽帳卡",
-      tag_type = List(TagType("A", "b"), TagType("C", "c")),
-      tag_name = "超市購物",
-      sql =
-        """
-          |select
-          |cutsomerID,
-          |cnt,
-          |item,
-          |txn_amt,
-          |txn_date
-          |from vp_bank.event_cc_txn
-          |join vp_bank.event_bp_point
-          |join vp_bank.rd_mis_merchant_id
-          |join vp_bank.rd_mis_mcc_code
-          |where yyyymm between concat(substr('''$start_date''',1,4),substr('''$start_date''',6,2))
-          |AND concat(substr('''$end_date''',1,4),substr('''$end_date''',6,2))
-        """.stripMargin.trim,
-      update_frequency = "D",
-      started = None,
-      traced = None,
-      description = "超市購買族群",
-      disable_flag = Option(false),
-      create_time = "2018-03-12",
-      update_time = "2018-03-12",
-      score_method = "B",
-      attribute = "behavior",
-      creator = "Roger",
-      is_focus = true,
-      system_name = "ATS",
-      tickets = List("aaa", "qweq"))
-    FBsonCollection.flatMap( coll => MongoUtils.insert(coll, neilYoung) ).onSuccess {
-      case result =>
-        println(s"successfully or not: $result")
-    }
-  }
+//  for (i <- 1 to 2) {
+//    val neilYoung = CustomerDictionary(
+//      tag_id = randomString(20),
+//      source_type = "Alex",
+//      source_item = "信用卡/簽帳卡",
+//      tag_type = List(TagType("A", "b"), TagType("C", "c")),
+//      tag_name = "超市購物",
+//      sql =
+//        """
+//          |select
+//          |cutsomerID,
+//          |cnt,
+//          |item,
+//          |txn_amt,
+//          |txn_date
+//          |from vp_bank.event_cc_txn
+//          |join vp_bank.event_bp_point
+//          |join vp_bank.rd_mis_merchant_id
+//          |join vp_bank.rd_mis_mcc_code
+//          |where yyyymm between concat(substr('''$start_date''',1,4),substr('''$start_date''',6,2))
+//          |AND concat(substr('''$end_date''',1,4),substr('''$end_date''',6,2))
+//        """.stripMargin.trim,
+//      update_frequency = "D",
+//      started = None,
+//      traced = None,
+//      description = "超市購買族群",
+//      disable_flag = Option(false),
+//      create_time = "2018-03-12",
+//      update_time = "2018-03-12",
+//      score_method = "B",
+//      attribute = "behavior",
+//      creator = "Roger",
+//      is_focus = true,
+//      system_name = "ATS",
+//      tickets = List("aaa", "qweq"))
+//    FBsonCollection.flatMap( coll => MongoUtils.insert(coll, neilYoung) ).onSuccess {
+//      case result =>
+//        println(s"successfully or not: $result")
+//    }
+//  }
 
 
 //  FBsonCollection.flatMap( coll => MongoUtils.insert(coll, neilYoung) ).onSuccess {

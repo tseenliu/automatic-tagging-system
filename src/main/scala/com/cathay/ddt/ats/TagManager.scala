@@ -6,7 +6,7 @@ import akka.persistence._
 import akka.pattern.ask
 import akka.util.Timeout
 import akka.actor.OneForOneStrategy
-import akka.actor.SupervisorStrategy.{Stop, _}
+import akka.actor.SupervisorStrategy._
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import com.cathay.ddt.kafka.MessageConsumer
@@ -347,7 +347,7 @@ class TagManager extends PersistentActor with CalendarConverter {
           }
         }
       } else{
-        log.warn(s"tagID: ${tagDic.actorID} is already exist.")
+        log.warn(s"SegmentID: ${tagDic.actorID} is already exist.")
       }
 
     case cmd @ Cmd(StopTag(id)) =>
@@ -362,10 +362,10 @@ class TagManager extends PersistentActor with CalendarConverter {
 
     case cmd @ Cmd(Update(tagDic)) =>
       val tagMessages = MessageConverter.getMessages(tagDic.sql).toSet
-      persist(Evt(TagInsUpdated(tagDic.update_frequency, tagDic.tag_id, tagMessages))) { evt =>
+      persist(Evt(TagInsUpdated(tagDic.update_frequency, tagDic.actorID, tagMessages))) { evt =>
         updateState(evt)
       }
-      val ti = state.tagInstReg.getTI(tagDic.tag_id)
+      val ti = state.tagInstReg.getTI(tagDic.actorID)
       if(ti.get.isActive) {
         ti.get.actor.get ! Requirement(tagDic.update_frequency, tagMessages)
       }
@@ -402,7 +402,7 @@ class TagManager extends PersistentActor with CalendarConverter {
 
     case Cmd(ShowState) =>
       state.ShowTagInfo()
-//      println(s"The Current state of counter is $state")
+      println(s"The Current state of counter is $state")
 
     case SaveSnapshotSuccess(metadata) =>
 //      println(s"save snapshot succeed.")

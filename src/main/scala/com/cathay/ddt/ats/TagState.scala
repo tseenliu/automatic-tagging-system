@@ -209,18 +209,13 @@ class TagState(frequency: String, id: String, schedulerActor: ActorRef) extends 
         }
 
       case ReceivedMessage(tm, Daily) =>
-        if(tm.partition_fields.isDefined && tm.partition_values.get.contains(getDailyDate)) {
-          // partition
+        if(tm.partition_fields.isDefined && tm.partition_values.isDefined) {
           Metadata(currentData.requiredMessages, currentData.daily - convertTM(tm) + (tm -> true), currentData.monthly)
-        }else if(tm.partition_fields.isEmpty && tm.partition_values.isEmpty){
-          // 代碼
-          Metadata(currentData.requiredMessages, currentData.daily - convertTM(tm) + (tm -> true), currentData.monthly)
-        } else {
-          currentData
-        }
+        } else currentData
+
 
       case ReceivedMessage(tm, Monthly) =>
-        if(tm.partition_fields.isDefined && tm.partition_values.get.contains(getLastMonth))
+        if(tm.partition_fields.isDefined && tm.partition_values.isDefined)
           Metadata(currentData.requiredMessages, currentData.daily, currentData.monthly - convertTM(tm) + (tm -> true))
         else currentData
 
@@ -424,7 +419,7 @@ class TagState(frequency: String, id: String, schedulerActor: ActorRef) extends 
 
   def getDictionary: Future[CustomerDictionary] = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    val query = BSONDocument("tag_id" -> id)
+    val query = BSONDocument("segment_id" -> id)
     MongoConnector.getTDCollection.flatMap(x => MongoUtils.findOneDictionary(x, query))
   }
 
@@ -435,13 +430,6 @@ class TagState(frequency: String, id: String, schedulerActor: ActorRef) extends 
       dic.segment_name,
       dic.sql,
       dic.update_frequency,
-      dic.detail,
-      dic.description,
-      dic.create_time,
-      dic.update_time,
-      dic.creator,
-      dic.is_focus,
-      dic.tickets,
       getCurrentDate
     )
   }
