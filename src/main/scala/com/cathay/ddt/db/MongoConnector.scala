@@ -27,10 +27,10 @@ object MongoConnector extends EnvLoader{
   val driver: MongoDriver = new MongoDriver
   val connection: MongoConnection = driver.connection(List(MONGO_SERVER,MONGO_PORT))
 
-  def getTDCollection = dbFromConnection(connection, ATS_DB, CUS_DICT)
+  def getCUSDCollection = dbFromConnection(connection, ATS_DB, CUS_DICT)
 
   val hConnection: MongoConnection = driver.connection(List(HMONGO_SERVER,HMONGO_PORT))
-  def getHTDCollection = dbFromConnection(hConnection, HATS_DB, HCUS_DICT)
+  def getHCUSDCollection = dbFromConnection(hConnection, HATS_DB, HCUS_DICT)
 
   def dbFromConnection(connection: MongoConnection, database: String, collection: String): Future[BSONCollection] =
     connection.database(database).

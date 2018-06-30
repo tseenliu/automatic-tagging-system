@@ -20,28 +20,6 @@ case class CustomerDictionary(segment_id: String,
   val actorID: String = segment_id
 }
 
-//case class TagDictionary(tag_id: String,
-//                         source_type: String,
-//                         source_item: String,
-//                         tag_type: List[TagType],
-//                         tag_name: String,
-//                         sql: String,
-//                         update_frequency: String,
-//                         started: Option[Int],
-//                         traced: Option[Int],
-//                         description: String,
-//                         create_time: String,
-//                         update_time: String,
-//                         disable_flag: Option[Boolean],
-//                         score_method: String,
-//                         attribute: String,
-//                         creator: String,
-//                         is_focus: Boolean,
-//                         system_name: String,
-//                         tickets: List[String]) extends Dictionary {
-//  val actorID: String = tag_id
-//}
-
 case class DynamicCD(segment_id: Option[String],
                      segment_type: Option[String],
                      segment_name: Option[String],
