@@ -420,7 +420,7 @@ class TagState(frequency: String, id: String, schedulerActor: ActorRef) extends 
   def getDictionary: Future[CustomerDictionary] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     val query = BSONDocument("segment_id" -> id)
-    MongoConnector.getTDCollection.flatMap(x => MongoUtils.findOneDictionary(x, query))
+    MongoConnector.getCUSDCollection.flatMap(x => MongoUtils.findOneDictionary(x, query))
   }
 
   def getComposedSql(frequencyType: FrequencyType, dic: CustomerDictionary): ComposeCD = {

@@ -1,6 +1,6 @@
 package com.cathay.ddt.db
 
-import com.cathay.ddt.tagging.schema.{DynamicCD, QueryCD, CustomerDictionary}
+import com.cathay.ddt.tagging.schema.{CustomerDictionary, DynamicCD, QueryCD, TagDictionary}
 import org.slf4j.LoggerFactory
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.commands.WriteResult
@@ -14,8 +14,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 /**
   * Created by Tse-En on 2017/12/12.
   */
-object MongoUtils extends CustomerDictionaryExtension {
-
+object MongoUtils extends DictionaryExtension {
   val log = LoggerFactory.getLogger(this.getClass)
 
   /* Write Documents */
@@ -88,6 +87,10 @@ object MongoUtils extends CustomerDictionaryExtension {
   def findDictionaries(collection: BSONCollection, query: BSONDocument)(implicit ec: ExecutionContext): Future[List[CustomerDictionary]] = {
 //    implicit val reader = Macros.reader[TagDictionary]
     collection.find(query).cursor[CustomerDictionary]().collect[List]()
+  }
+
+  def findTagDictionaries(collection: BSONCollection, query: BSONDocument)(implicit ec: ExecutionContext): Future[List[TagDictionary]] = {
+    collection.find(query).cursor[TagDictionary]().collect[List]()
   }
 
   def findDictionaries(collection: BSONCollection, query: QueryCD)(implicit ec: ExecutionContext): Future[List[CustomerDictionary]] = {

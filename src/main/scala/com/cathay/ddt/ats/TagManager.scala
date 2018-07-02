@@ -41,7 +41,7 @@ object TagManager extends EnvLoader {
     import scala.concurrent.ExecutionContext.Implicits.global
     // load customer dictionary
     val query = BSONDocument()
-    MongoConnector.getTDCollection.flatMap(tagColl => MongoUtils.findDictionaries(tagColl, query)).map { docList =>
+    MongoConnector.getCUSDCollection.flatMap(tagColl => MongoUtils.findDictionaries(tagColl, query)).map { docList =>
       docList.foreach(TD => tagManager ! Cmd(Load(TD)))
     }
   }

@@ -1,11 +1,13 @@
 package com.cathay.ddt.utils
 
-import com.cathay.ddt.kafka.{FrontierMessage, FinishMessage}
+import com.cathay.ddt.kafka.FinishMessage
 import com.cathay.ddt.tagging.schema.TagMessage.{Message, SimpleTagMessage}
 import com.cathay.ddt.tagging.schema.{CustomerDictionary, TagMessage}
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.Await
+import scala.concurrent.duration._
 import scala.io.Source
 
 
@@ -22,7 +24,7 @@ object MessageConverter extends CalendarConverter {
   var sqlMList = new ListBuffer[(String, Message)]()
   var kafkaMList = new ListBuffer[(String, String)]()
   var sqlMTable: Map[String, Message] = Map()
-  var kafkaMTable: Map[String, String] = Map()
+//  var kafkaMTable: Map[String, String] = Map()
 
   def getRealDate(partitionValue: String): String = {
     val c = getCalendar
@@ -42,23 +44,23 @@ object MessageConverter extends CalendarConverter {
 
 
   // Convert frontier messages to tagMessages
-  def CovertToTM(topic: String, input: FrontierMessage): TagMessage = {
-    val value = s"${input.db}.${input.table}"
-    val frequency = getKafkaMTable(value)
-    frequency.toUpperCase() match {
-      case "M" =>
-        TagMessage(Some(topic), frequency.toUpperCase(), value, Some(input.partition_fields.head), Some(input.partition_values.head), Some(input.exec_date))
-      case "D" =>
-        if(!input.partition_fields.contains("")
-          && !input.partition_values.contains("")) {
-          TagMessage(Some(topic), frequency.toUpperCase(), value, Some(input.partition_fields.head), Some(getRealDate(input.partition_values.head)), Some(input.exec_date))
-        } else TagMessage(Some(topic), frequency.toUpperCase(), value, None, None, Some(input.exec_date))
-    }
-  }
+//  def CovertToTM(topic: String, input: FrontierMessage): TagMessage = {
+//    val value = s"${input.db}.${input.table}"
+//    val frequency = getKafkaMTable(value)
+//    frequency.toUpperCase() match {
+//      case "M" =>
+//        TagMessage(Some(topic), frequency.toUpperCase(), value, Some(input.partition_fields.head), Some(input.partition_values.head), Some(input.exec_date))
+//      case "D" =>
+//        if(!input.partition_fields.contains("")
+//          && !input.partition_values.contains("")) {
+//          TagMessage(Some(topic), frequency.toUpperCase(), value, Some(input.partition_fields.head), Some(getRealDate(input.partition_values.head)), Some(input.exec_date))
+//        } else TagMessage(Some(topic), frequency.toUpperCase(), value, None, None, Some(input.exec_date))
+//    }
+//  }
 
   // Convert finish messages to tagMessages
   def CovertToTM(topic: String, input: FinishMessage): TagMessage = {
-    TagMessage(Some(topic), input.update_frequency.toUpperCase(), input.tag_id, Some("segment_id"), Some(input.tag_id), Some(input.finish_time))
+    TagMessage(Some(topic), input.update_frequency.toUpperCase(), input.tag_id, Some("tag_id"), Some(input.tag_id), Some(input.finish_time))
   }
 
   // parsing sql and get require value
@@ -84,23 +86,21 @@ object MessageConverter extends CalendarConverter {
 
   def getSqlMTable: Map[String, Message] = {
     if (sqlMTable.isEmpty) {
-//      initialADW()
-      initialFromLocal()
+      initialADW()
+//      initialFromLocal()
       sqlMTable
-    } else {
-      sqlMTable
-    }
+    } else sqlMTable
+
   }
 
-  def getKafkaMTable: Map[String, String] = {
-    if (kafkaMTable.isEmpty) {
+//  def getKafkaMTable: Map[String, String] = {
+//    if (kafkaMTable.isEmpty) {
 //      initialADW()
-      initialFromLocal()
-      kafkaMTable
-    } else {
-      kafkaMTable
-    }
-  }
+////      initialFromLocal()
+//      kafkaMTable
+//    } else kafkaMTable
+//
+//  }
 
   def initialFromLocal(): Unit = {
     sqlMTable = Map()
@@ -113,10 +113,11 @@ object MessageConverter extends CalendarConverter {
 
   def initialADW(): Unit = {
     sqlMTable = Map()
-    kafkaMTable = Map()
-    ViewMapper.getViewMapper.initial()
+//    kafkaMTable = Map()
+    val f = ViewMapper.getViewMapper.initial()
+    Await.result(f, 10 second)
     sqlMTable = ViewMapper.getViewMapper.getSqlMList.toMap
-    kafkaMTable = ViewMapper.getViewMapper.getKafkaMList.toMap
+//    kafkaMTable = ViewMapper.getViewMapper.getKafkaMList.toMap
   }
 
 }

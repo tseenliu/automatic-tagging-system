@@ -16,21 +16,6 @@ object ComposeCDProtocal extends DefaultJsonProtocol {
         "update_frequency" -> JsString(ctd.update_frequency),
         "execute_date" -> JsString(ctd.execute_date)
       )
-//      JsObject(
-//        "segment_id" -> JsString(ctd.segment_id),
-//        "segment_type" -> JsString(ctd.segment_type),
-//        "segment_name" -> JsString(ctd.segment_name),
-//        "sql" -> JsString(ctd.sql),
-//        "update_frequency" -> JsString(ctd.update_frequency),
-//        "detail" -> JsString(ctd.detail),
-//        "description" -> JsString(ctd.description),
-//        "create_time" -> JsString(ctd.create_time),
-//        "update_time" -> JsString(ctd.update_time),
-//        "creator" -> JsString(ctd.creator),
-//        "is_focus" -> JsBoolean(ctd.is_focus),
-//        "tickets" -> ctd.tickets.toJson,
-//        "execute_date" -> JsString(ctd.execute_date)
-//      )
     }
     def read(value: JsValue): ComposeCD = {
       val jso = value.asJsObject
