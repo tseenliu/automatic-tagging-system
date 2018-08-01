@@ -1,14 +1,14 @@
 package com.cathay.ddt.db
 
-import com.cathay.ddt.tagging.schema.{CustomerDictionary, TagDictionary, TagType}
+import com.cathay.ddt.tagging.schema.{SegmentDictionary, TagDictionary, TagType}
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader, BSONDocumentWriter, Macros}
 
 class DictionaryExtension {
 //  implicit val reader = Macros.reader[TagDictionary]
 //  implicit val writer = Macros.writer[TagDictionary]
 
-  implicit object CUSTDWriter extends BSONDocumentWriter[CustomerDictionary] {
-    def write(ctd: CustomerDictionary): BSONDocument = BSONDocument(
+  implicit object CUSTDWriter extends BSONDocumentWriter[SegmentDictionary] {
+    def write(ctd: SegmentDictionary): BSONDocument = BSONDocument(
       "segment_id" -> ctd.segment_id,
       "segment_type" -> ctd.segment_type,
       "segment_name" -> ctd.segment_name,
@@ -23,8 +23,8 @@ class DictionaryExtension {
       "tickets" -> ctd.tickets)
   }
 
-  implicit object CUSTDReader extends BSONDocumentReader[CustomerDictionary] {
-    def read(doc: BSONDocument): CustomerDictionary = CustomerDictionary(
+  implicit object CUSTDReader extends BSONDocumentReader[SegmentDictionary] {
+    def read(doc: BSONDocument): SegmentDictionary = SegmentDictionary(
       doc.getAs[String]("segment_id").get,
       doc.getAs[String]("segment_type").get,
       doc.getAs[String]("segment_name").get,

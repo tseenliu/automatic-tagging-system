@@ -1,7 +1,7 @@
 package com.cathay.ddt.app.test
 
 import akka.actor.ActorSystem
-import com.cathay.ddt.ats.TagManager.{Cmd, ShowState}
+import com.cathay.ddt.ats.SegmentManager.{Cmd, ShowState}
 import com.cathay.ddt.utils.EnvLoader
 
 

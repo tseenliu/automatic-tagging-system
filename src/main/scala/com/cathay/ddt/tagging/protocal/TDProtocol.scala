@@ -1,12 +1,12 @@
 package com.cathay.ddt.tagging.protocal
 
-import com.cathay.ddt.tagging.schema.CustomerDictionary
+import com.cathay.ddt.tagging.schema.SegmentDictionary
 import spray.json._
 
 object TDProtocol extends DefaultJsonProtocol {
 
-  implicit object TdJsonFormat extends RootJsonFormat[CustomerDictionary] {
-    def write(ctd: CustomerDictionary) = {
+  implicit object TdJsonFormat extends RootJsonFormat[SegmentDictionary] {
+    def write(ctd: SegmentDictionary) = {
       JsObject(
         "segment_id" -> JsString(ctd.segment_id),
         "segment_type" -> JsString(ctd.segment_type),
@@ -22,7 +22,7 @@ object TDProtocol extends DefaultJsonProtocol {
         "tickets" -> ctd.tickets.toJson
       )
     }
-    def read(value: JsValue): CustomerDictionary = {
+    def read(value: JsValue): SegmentDictionary = {
       val jso = value.asJsObject
       val tickets = jso.fields("tickets").convertTo[List[String]]
 
@@ -41,7 +41,7 @@ object TDProtocol extends DefaultJsonProtocol {
         case Seq(
         JsString(segment_id), JsString(segment_type), JsString(segment_name), JsString(sql), JsString(update_frequency), JsString(detail),
         JsString(description), JsString(create_time), JsString(update_time), JsString(creator), JsBoolean(is_focus)) =>
-          CustomerDictionary(
+          SegmentDictionary(
             segment_id, segment_type, segment_name, sql, update_frequency, detail, description,
             create_time, update_time, creator, is_focus, tickets)
 

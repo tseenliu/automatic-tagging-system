@@ -1,8 +1,8 @@
 package com.cathay.ddt.tagging.core
 
 import akka.actor.Actor
-import com.cathay.ddt.ats.TagScheduler._
-import com.cathay.ddt.ats.TagState.Report
+import com.cathay.ddt.ats.SegmentScheduler._
+import com.cathay.ddt.ats.SegmentState.Report
 import com.cathay.ddt.utils.CalendarConverter
 import org.slf4j.LoggerFactory
 

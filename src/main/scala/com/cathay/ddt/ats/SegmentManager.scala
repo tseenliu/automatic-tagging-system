@@ -10,9 +10,9 @@ import akka.actor.SupervisorStrategy._
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import com.cathay.ddt.kafka.MessageConsumer
-import com.cathay.ddt.tagging.schema.{CustomerDictionary, TagMessage}
+import com.cathay.ddt.tagging.schema.{SegmentDictionary, TagMessage}
 import com.cathay.ddt.tagging.schema.TagMessage.Message
-import com.cathay.ddt.ats.TagState._
+import com.cathay.ddt.ats.SegmentState._
 import com.cathay.ddt.utils.{CalendarConverter, EnvLoader, MessageConverter}
 
 import scala.concurrent.Future
@@ -25,14 +25,14 @@ import reactivemongo.bson.BSONDocument
   * Created by Tse-En on 2017/12/17.
   */
 
-object TagManager extends EnvLoader {
+object SegmentManager extends EnvLoader {
 
   val log = LoggerFactory.getLogger(this.getClass)
   val config = getConfig("ats")
 
   def initiate: ActorRef = {
-    val system = ActorSystem("tag", config.getConfig("ats.TagManager"))
-    val tagManager = system.actorOf(Props[TagManager], name="tag-manager")
+    val system = ActorSystem("segment", config.getConfig("ats.TagManager"))
+    val tagManager = system.actorOf(Props[SegmentManager], name="segment-manager")
     initialDictionary(tagManager)
     tagManager
   }
@@ -48,18 +48,18 @@ object TagManager extends EnvLoader {
 
   // TagManager State Operation
   sealed trait ManagerCommand
-  case class Load(doc: CustomerDictionary) extends ManagerCommand
-  case class Register(doc: CustomerDictionary) extends ManagerCommand
+  case class Load(doc: SegmentDictionary) extends ManagerCommand
+  case class Register(doc: SegmentDictionary) extends ManagerCommand
   case class StopTag(id: String) extends ManagerCommand
   case class Remove(id: String) extends ManagerCommand
-  case class Update(doc: CustomerDictionary) extends ManagerCommand
+  case class Update(doc: SegmentDictionary) extends ManagerCommand
   case object GetTagStatus extends ManagerCommand
   case object ShowState extends ManagerCommand
   case class TimeChecker(time: String) extends ManagerCommand
 
 
   sealed trait ManagerOperation
-  case class TagRegister(tagDic: CustomerDictionary) extends ManagerOperation
+  case class TagRegister(tagDic: SegmentDictionary) extends ManagerOperation
   case class TagMesAdded(id: String, tagMessage: Message) extends ManagerOperation
   case class TagInsActorCreated(ti: TagInstance, actorRef: ActorRef) extends ManagerOperation
   case class TagInsStopped(id: String) extends ManagerOperation
@@ -79,7 +79,7 @@ object TagManager extends EnvLoader {
     def count: Int = state.size
     def getTMs(ti: TagInstance): Set[Message] = state(ti)
     def getTIs: Set[TagInstance] = state.keySet
-    def register(tagDic: CustomerDictionary): TIsRegistry =
+    def register(tagDic: SegmentDictionary): TIsRegistry =
       TIsRegistry(state + (TagInstance(tagDic.update_frequency.toUpperCase, tagDic.actorID) -> Set()))
 
     def getTI(id: String): Option[TagInstance] = {
@@ -181,8 +181,8 @@ object TagManager extends EnvLoader {
   }
 
   case class State(tagInstReg: TIsRegistry, tagMesReg: TMsRegistry) {
-    def register(tagDic: CustomerDictionary): State = State(tagInstReg.register(tagDic), tagMesReg)
-    def contains(tagDic: CustomerDictionary): Boolean = tagInstReg.contains(tagDic.actorID)
+    def register(tagDic: SegmentDictionary): State = State(tagInstReg.register(tagDic), tagMesReg)
+    def contains(tagDic: SegmentDictionary): Boolean = tagInstReg.contains(tagDic.actorID)
     def contains(message: Message): Boolean = tagMesReg.contains(message)
     def getTIs(message: Message): Set[TagInstance] = tagMesReg.getTIs(message)
     def getTIs: Set[TagInstance] = tagInstReg.getTIs
@@ -247,8 +247,8 @@ object TagManager extends EnvLoader {
 
 }
 
-class TagManager extends PersistentActor with CalendarConverter {
-  import TagManager._
+class SegmentManager extends PersistentActor with CalendarConverter {
+  import SegmentManager._
   import scala.concurrent.ExecutionContext.Implicits.global
 
   var schedulerAf: ActorRef = _
@@ -265,20 +265,20 @@ class TagManager extends PersistentActor with CalendarConverter {
     }
 
   override def preStart(): Unit = {
-    schedulerAf = context.actorOf(Props[TagScheduler], name="tag-scheduler")
+    schedulerAf = context.actorOf(Props[SegmentScheduler], name="segment-scheduler")
     context.actorOf(Props[MessageConsumer], "messages-consumer")
     context.system.scheduler.schedule(0 seconds, 1 seconds, self, Cmd(TimeChecker(etlTime)))
-    log.info(s"TagManager is [Start].")
+    log.info(s"SegmentManager is [Start].")
   }
 
   override def postStop(): Unit = {
-    log.info(s"TagManager is [Stop].")
+    log.info(s"SegmentManager is [Stop].")
   }
 
-  override def persistenceId: String = "tag-manager"
+  override def persistenceId: String = "segment-manager"
 
   def createActor(frequency: String, actorId: String): ActorRef = {
-    context.actorOf(Props(new TagState(frequency, actorId, schedulerAf)) ,name = actorId)
+    context.actorOf(Props(new SegmentState(frequency, actorId, schedulerAf)) ,name = actorId)
   }
 
   def updateState(evt: Evt): Unit = evt match {
@@ -304,7 +304,7 @@ class TagManager extends PersistentActor with CalendarConverter {
 
   def createAndSend(ti: TagInstance, tagMessage: TagMessage): Unit = {
     implicit val timeout = Timeout(10 seconds)
-    val actorRef = context.actorOf(Props(new TagState(ti.frequency, ti.id, schedulerAf)) ,name = ti.id)
+    val actorRef = context.actorOf(Props(new SegmentState(ti.frequency, ti.id, schedulerAf)) ,name = ti.id)
     (actorRef ? Requirement(ti.frequency, state.getTMs(ti))).map{
       case true =>
         log.info(s"Send Requirement Messages finished and send one message.")

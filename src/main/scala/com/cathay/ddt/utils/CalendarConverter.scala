@@ -3,7 +3,7 @@ package com.cathay.ddt.utils
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
-import com.cathay.ddt.ats.TagState.{Daily, FrequencyType, Monthly}
+import com.cathay.ddt.ats.SegmentState.{Daily, FrequencyType, Monthly}
 import com.typesafe.config.Config
 
 /**

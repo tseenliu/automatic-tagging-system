@@ -5,22 +5,22 @@ package com.cathay.ddt.tagging.schema
   */
 
 sealed trait Dictionary
-case class CustomerDictionary(segment_id: String,
-                              segment_type: String,
-                              segment_name: String,
-                              sql: String,
-                              update_frequency: String,
-                              detail: String,
-                              description: String,
-                              create_time: String,
-                              update_time: String,
-                              creator: String,
-                              is_focus: Boolean,
-                              tickets: List[String]) extends Dictionary {
+case class SegmentDictionary(segment_id: String,
+                             segment_type: String,
+                             segment_name: String,
+                             sql: String,
+                             update_frequency: String,
+                             detail: String,
+                             description: String,
+                             create_time: String,
+                             update_time: String,
+                             creator: String,
+                             is_focus: Boolean,
+                             tickets: List[String]) extends Dictionary {
   val actorID: String = segment_id
 }
 
-case class DynamicCD(segment_id: Option[String],
+case class DynamicSD(segment_id: Option[String],
                      segment_type: Option[String],
                      segment_name: Option[String],
                      sql: Option[String],
@@ -29,11 +29,12 @@ case class DynamicCD(segment_id: Option[String],
                      description: Option[String],
                      create_time: Option[String],
                      update_time: Option[String],
+                     disable_flag: Option[Boolean],
                      creator: Option[String],
                      is_focus: Option[Boolean],
                      tickets: Option[List[String]]) extends Dictionary
 
-case class QueryCD(segment_id: Option[String],
+case class QuerySD(segment_id: Option[String],
                    segment_type: Option[String],
                    segment_name: Option[String],
                    sql: Option[String],
@@ -46,7 +47,7 @@ case class QueryCD(segment_id: Option[String],
                    is_focus: Option[Boolean],
                    tickets: Option[List[String]]) extends Dictionary
 
-case class ComposeCD(segment_id: String,
+case class ComposeSD(segment_id: String,
                      segment_type: String,
                      segment_name: String,
                      sql: String,

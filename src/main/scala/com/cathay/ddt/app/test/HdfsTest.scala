@@ -1,6 +1,6 @@
 package com.cathay.ddt.app.test
 
-import com.cathay.ddt.tagging.schema.{ComposeCD, QueryCD, CustomerDictionary}
+import com.cathay.ddt.tagging.schema.{ComposeSD, QuerySD, SegmentDictionary}
 import com.cathay.ddt.utils.HdfsClient
 import spray.json._
 

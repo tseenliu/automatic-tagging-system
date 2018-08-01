@@ -1,7 +1,7 @@
 package com.cathay.ddt.kafka
 
 import cakesolutions.kafka.{KafkaProducer, KafkaProducerRecord}
-import com.cathay.ddt.tagging.schema.ComposeCD
+import com.cathay.ddt.tagging.schema.ComposeSD
 import com.cathay.ddt.utils.CalendarConverter
 import com.typesafe.config.Config
 import org.apache.kafka.common.serialization.StringSerializer
@@ -27,7 +27,7 @@ class MessageProducer extends CalendarConverter {
     ).withConf(producerConfig)
   )
 
-  def sendToStart(startTime: Long, ctd: ComposeCD, messages: List[SimpleTagMessage]): Unit = {
+  def sendToStart(startTime: Long, ctd: ComposeSD, messages: List[SimpleTagMessage]): Unit = {
     val sMessage =
       StartMessage(
         tagName,
@@ -40,7 +40,7 @@ class MessageProducer extends CalendarConverter {
     log.info(s"Tag(${ctd.update_frequency}) ID[${ctd.actorID}] is producing started topic.")
   }
 
-  def sendToFinishTopic(startTime: Long, ctd: ComposeCD, messages: List[TM2Show], is_success: Boolean): Unit = {
+  def sendToFinishTopic(startTime: Long, ctd: ComposeSD, messages: List[TM2Show], is_success: Boolean): Unit = {
     val finishTime = getCalendar.getTimeInMillis/1000
     val durationTime = finishTime - startTime
     val fMessage =

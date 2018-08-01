@@ -1,6 +1,6 @@
 package com.cathay.ddt.app
 
-import com.cathay.ddt.ats.TagManager.{Cmd, ShowState}
+import com.cathay.ddt.ats.SegmentManager.{Cmd, ShowState}
 import com.cathay.ddt.ats._
 import com.cathay.ddt.utils.EnvLoader
 import org.slf4j.{Logger, LoggerFactory}
@@ -8,13 +8,13 @@ import org.slf4j.{Logger, LoggerFactory}
 /**
   * Created by Tse-En on 2017/12/21.
   */
-object BootTagManager extends App with EnvLoader {
+object BootSegmentManager extends App with EnvLoader {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
   try
   {
-    val tagManagerRef = TagManager.initiate
+    val tagManagerRef = SegmentManager.initiate
     Thread.sleep(5000)
     tagManagerRef ! Cmd(ShowState)
   }

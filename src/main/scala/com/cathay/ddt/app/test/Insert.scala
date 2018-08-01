@@ -1,7 +1,7 @@
 package com.cathay.ddt.app.test
 
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
-import com.cathay.ddt.tagging.schema.{CustomerDictionary}
+import com.cathay.ddt.tagging.schema.{SegmentDictionary}
 
 /**
   * Created by Tse-En on 2017/12/12.

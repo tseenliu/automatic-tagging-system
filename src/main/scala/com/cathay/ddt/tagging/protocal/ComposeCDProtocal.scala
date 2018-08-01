@@ -1,13 +1,13 @@
 package com.cathay.ddt.tagging.protocal
 
 import spray.json._
-import com.cathay.ddt.tagging.schema.ComposeCD
+import com.cathay.ddt.tagging.schema.ComposeSD
 import spray.json.{DefaultJsonProtocol, DeserializationException, JsObject, JsString, JsValue, RootJsonFormat}
 
 object ComposeCDProtocal extends DefaultJsonProtocol {
 
-  implicit object ComposeTdJsonFormat extends RootJsonFormat[ComposeCD] {
-    def write(ctd: ComposeCD) = {
+  implicit object ComposeTdJsonFormat extends RootJsonFormat[ComposeSD] {
+    def write(ctd: ComposeSD) = {
       JsObject(
         "segment_id" -> JsString(ctd.segment_id),
         "segment_type" -> JsString(ctd.segment_type),
@@ -17,7 +17,7 @@ object ComposeCDProtocal extends DefaultJsonProtocol {
         "execute_date" -> JsString(ctd.execute_date)
       )
     }
-    def read(value: JsValue): ComposeCD = {
+    def read(value: JsValue): ComposeSD = {
       val jso = value.asJsObject
 
       value.asJsObject.getFields(
@@ -30,7 +30,7 @@ object ComposeCDProtocal extends DefaultJsonProtocol {
         case Seq(
         JsString(segment_id), JsString(segment_type), JsString(segment_name),
         JsString(sql), JsString(update_frequency), JsString(execute_date)) =>
-          ComposeCD(segment_id, segment_type, segment_name, sql, update_frequency, execute_date)
+          ComposeSD(segment_id, segment_type, segment_name, sql, update_frequency, execute_date)
 
         case _ => throw DeserializationException("Tag Dictionary Json formatted error.")
       }

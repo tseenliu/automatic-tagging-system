@@ -6,8 +6,8 @@ import akka.actor.ActorRef
 import akka.persistence._
 import akka.persistence.fsm._
 import akka.persistence.fsm.PersistentFSM.FSMState
-import com.cathay.ddt.ats.TagManager.{Cmd, StopTag}
-import com.cathay.ddt.ats.TagScheduler._
+import com.cathay.ddt.ats.SegmentManager.{Cmd, StopTag}
+import com.cathay.ddt.ats.SegmentScheduler._
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import com.cathay.ddt.kafka.MessageProducer
 import com.cathay.ddt.tagging.schema._
@@ -24,7 +24,7 @@ import scala.concurrent.duration._
   * Created by Tse-En on 2017/12/28.
   */
 
-object TagState {
+object SegmentState {
 
   // Tag FSM States
   sealed trait State extends FSMState
@@ -96,7 +96,7 @@ object TagState {
 
   case class TagMetadata(frequency: String, id: String, metadata: Metadata) {
     override def toString: String = {
-      s"Tag($frequency, ID($id):\n$metadata"
+      s"Segment($frequency, ID($id):\n$metadata"
     }
   }
 
@@ -129,7 +129,7 @@ object TagState {
   case class Receipt(tagMessage: TagMessage)
   case object Check
   case object Launch
-  case class Report(status:RunStatus, startTime:Long, dic: ComposeCD)
+  case class Report(status:RunStatus, startTime:Long, dic: ComposeSD)
   case object Stop
   case object GetStatus
   case object RevivalCheck
@@ -138,8 +138,8 @@ object TagState {
 
 }
 
-class TagState(frequency: String, id: String, schedulerActor: ActorRef) extends PersistentFSM[TagState.State, TagState.Data, TagState.DomainEvent] with CalendarConverter {
-  import TagState._
+class SegmentState(frequency: String, id: String, schedulerActor: ActorRef) extends PersistentFSM[SegmentState.State, SegmentState.Data, SegmentState.DomainEvent] with CalendarConverter {
+  import SegmentState._
 
   var freq: String = frequency
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
@@ -147,12 +147,12 @@ class TagState(frequency: String, id: String, schedulerActor: ActorRef) extends 
   override def preStart(): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
     context.system.scheduler.schedule(0 seconds, 1 seconds, self, Timeout(etlTime))
-    logger.info(s"Tag($freq), ID($id) is [UP].")
+    logger.info(s"Segment($freq), ID($id) is [UP].")
     self ! RevivalCheck
   }
 
   override def postStop(): Unit = {
-    logger.info(s"Tag($freq), ID($id) is [DOWN].")
+    logger.info(s"Segment($freq), ID($id) is [DOWN].")
   }
 
   def currentInst: TagMetadata = {
@@ -266,7 +266,7 @@ class TagState(frequency: String, id: String, schedulerActor: ActorRef) extends 
         if (stateData.isNull) sender() ! false
         else sender() ! true
         saveStateSnapshot()
-        logger.info(s"Tag($freq, ID($id):\n$stateData")
+        logger.info(s"Segment($freq, ID($id):\n$stateData")
       }
 
     case Event(Receipt(tm), _) =>
@@ -275,16 +275,16 @@ class TagState(frequency: String, id: String, schedulerActor: ActorRef) extends 
           stay applying ReceivedMessage(tm, Daily) andThen { _ =>
             saveStateSnapshot()
             self ! Check
-            logger.info(s"Tag($freq, ID($id):\n$stateData")
+            logger.info(s"Segment($freq, ID($id):\n$stateData")
           }
         case "M" =>
           stay applying ReceivedMessage(tm, Monthly) andThen{ _ =>
             saveStateSnapshot()
             self ! Check
-            logger.info(s"Tag($freq, ID($id):\n$stateData")
+            logger.info(s"Segment($freq, ID($id):\n$stateData")
           }
         case _ =>
-          logger.warn(s"Tag($freq, ID($id): ${tm.update_frequency} match error.")
+          logger.warn(s"Segment($freq, ID($id): ${tm.update_frequency} match error.")
           stay()
       }
 
@@ -352,7 +352,7 @@ class TagState(frequency: String, id: String, schedulerActor: ActorRef) extends 
           stateData.asInstanceOf[Metadata].rerty += 1
           if (stateData.asInstanceOf[Metadata].rerty==3) {
             MessageProducer.getProducer.sendToFinishTopic(startTime, ctd, (stateData.daily ++ stateData.monthly).keySet.map(x => convertTM2(x)).toList, is_success = false)
-            logger.warn(s"Tag($freq) ID[${ctd.actorID}] is not finish and goto Receiving state.")
+            logger.warn(s"Segment($freq) ID[${ctd.actorID}] is not finish and goto Receiving state.")
             ctd.update_frequency match {
               case "M" => goto (Receiving) applying Reset(Monthly)
               case "D" => goto (Receiving) applying Reset(Daily)
@@ -365,8 +365,8 @@ class TagState(frequency: String, id: String, schedulerActor: ActorRef) extends 
           }
       }
   }
-  def updateAndCheck(ctd: Dictionary): PersistentFSM.State[TagState.State, Data, DomainEvent] = {
-    ctd.asInstanceOf[ComposeCD].update_frequency match {
+  def updateAndCheck(ctd: Dictionary): PersistentFSM.State[SegmentState.State, Data, DomainEvent] = {
+    ctd.asInstanceOf[ComposeSD].update_frequency match {
       case "M" =>
           goto(Verifying) applying UpdatedMessages(Monthly) andThen { _ =>
             saveStateSnapshot()
@@ -402,7 +402,7 @@ class TagState(frequency: String, id: String, schedulerActor: ActorRef) extends 
         goto(Receiving)
 
       }else if(freq == "M" && stateData.asInstanceOf[Metadata].monthlyAlreadyRun.get == getLastMonth) {
-        logger.info(s"Tag($freq) ID[$id] is already run in Month[${stateData.asInstanceOf[Metadata].monthlyAlreadyRun}].")
+        logger.info(s"Segment($freq) ID[$id] is already run in Month[${stateData.asInstanceOf[Metadata].monthlyAlreadyRun}].")
         context.parent ! Cmd(StopTag(id))
         stop()
 
@@ -417,14 +417,14 @@ class TagState(frequency: String, id: String, schedulerActor: ActorRef) extends 
     deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr = lastSequenceNr))
   }
 
-  def getDictionary: Future[CustomerDictionary] = {
+  def getDictionary: Future[SegmentDictionary] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     val query = BSONDocument("segment_id" -> id)
     MongoConnector.getCUSDCollection.flatMap(x => MongoUtils.findOneDictionary(x, query))
   }
 
-  def getComposedSql(frequencyType: FrequencyType, dic: CustomerDictionary): ComposeCD = {
-    ComposeCD(
+  def getComposedSql(frequencyType: FrequencyType, dic: SegmentDictionary): ComposeSD = {
+    ComposeSD(
       dic.segment_id,
       dic.segment_type,
       dic.segment_name,
