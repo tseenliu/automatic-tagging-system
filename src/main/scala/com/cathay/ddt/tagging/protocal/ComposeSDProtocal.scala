@@ -4,9 +4,9 @@ import spray.json._
 import com.cathay.ddt.tagging.schema.ComposeSD
 import spray.json.{DefaultJsonProtocol, DeserializationException, JsObject, JsString, JsValue, RootJsonFormat}
 
-object ComposeCDProtocal extends DefaultJsonProtocol {
+object ComposeSDProtocal extends DefaultJsonProtocol {
 
-  implicit object ComposeTdJsonFormat extends RootJsonFormat[ComposeSD] {
+  implicit object ComposeSDJsonFormat extends RootJsonFormat[ComposeSD] {
     def write(ctd: ComposeSD) = {
       JsObject(
         "segment_id" -> JsString(ctd.segment_id),

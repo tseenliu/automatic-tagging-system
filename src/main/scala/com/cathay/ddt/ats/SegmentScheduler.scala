@@ -10,7 +10,7 @@ import com.cathay.ddt.utils.{CalendarConverter, HdfsClient, YarnMetricsChecker}
 
 import scala.concurrent.duration._
 import scala.collection.mutable.ListBuffer
-import com.cathay.ddt.tagging.protocal.ComposeCDProtocal._
+import com.cathay.ddt.tagging.protocal.ComposeSDProtocal._
 import org.slf4j.LoggerFactory
 import spray.json._
 

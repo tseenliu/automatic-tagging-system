@@ -62,8 +62,8 @@ trait ApiRoute extends EnvLoader{
       system.actorSelection(s"akka.tcp://segment@$tmHost:$tmPort/user/segment-manager")
 
     pathPrefix("segments") {
-      import com.cathay.ddt.tagging.protocal.TDProtocol._
-      import com.cathay.ddt.tagging.protocal.DynamicTDProtocol._
+      import com.cathay.ddt.tagging.protocal.SDProtocol._
+      import com.cathay.ddt.tagging.protocal.DynamicSDProtocol._
       pathEnd {
         // write operation
         (post & entity(as[DynamicSD])) { td =>
@@ -111,7 +111,7 @@ trait ApiRoute extends EnvLoader{
       } ~
         // find operation
         path("search") {
-          import com.cathay.ddt.tagging.protocal.QueryTDProtocol._
+          import com.cathay.ddt.tagging.protocal.QuerySDProtocol._
           (post & entity(as[QuerySD])) { dtd =>
             complete {
               log.info(s"Request to search $dtd.")
@@ -160,7 +160,7 @@ trait ApiRoute extends EnvLoader{
         pathEnd {
           (get) {
             complete {
-              import com.cathay.ddt.tagging.protocal.DynamicTDProtocol._
+              import com.cathay.ddt.tagging.protocal.DynamicSDProtocol._
               log.info(s"Request to get tags.")
               val ListTD = MongoConnector.getCUSDCollection.flatMap(coll => MongoUtils.findDictionaries(coll, BSONDocument()))
               OK -> ListTD
@@ -169,8 +169,8 @@ trait ApiRoute extends EnvLoader{
         }
     } ~
       pathPrefix("history") {
-        import com.cathay.ddt.tagging.protocal.TDProtocol._
-        import com.cathay.ddt.tagging.protocal.DynamicTDProtocol._
+        import com.cathay.ddt.tagging.protocal.SDProtocol._
+        import com.cathay.ddt.tagging.protocal.DynamicSDProtocol._
         pathEnd {
           // write operation
           (post & entity(as[DynamicSD])) { td =>
@@ -214,7 +214,7 @@ trait ApiRoute extends EnvLoader{
           } ~
           // find operation
           path("search") {
-            import com.cathay.ddt.tagging.protocal.QueryTDProtocol._
+            import com.cathay.ddt.tagging.protocal.QuerySDProtocol._
             (post & entity(as[QuerySD])) { dtd =>
               complete {
                 log.info(s"Request to search $dtd.")
@@ -261,7 +261,7 @@ trait ApiRoute extends EnvLoader{
           pathEnd {
             (get) {
               complete {
-                import com.cathay.ddt.tagging.protocal.DynamicTDProtocol._
+                import com.cathay.ddt.tagging.protocal.DynamicSDProtocol._
                 log.info(s"Request to get tags.")
                 val ListTD = MongoConnector.getHCUSDCollection.flatMap(coll => MongoUtils.findDictionaries(coll, BSONDocument()))
                 OK -> ListTD

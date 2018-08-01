@@ -29,7 +29,6 @@ case class DynamicSD(segment_id: Option[String],
                      description: Option[String],
                      create_time: Option[String],
                      update_time: Option[String],
-                     disable_flag: Option[Boolean],
                      creator: Option[String],
                      is_focus: Option[Boolean],
                      tickets: Option[List[String]]) extends Dictionary

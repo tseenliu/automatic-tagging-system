@@ -3,7 +3,7 @@ package com.cathay.ddt.tagging.protocal
 import com.cathay.ddt.tagging.schema.SegmentDictionary
 import spray.json._
 
-object TDProtocol extends DefaultJsonProtocol {
+object SDProtocol extends DefaultJsonProtocol {
 
   implicit object TdJsonFormat extends RootJsonFormat[SegmentDictionary] {
     def write(ctd: SegmentDictionary) = {
@@ -45,7 +45,7 @@ object TDProtocol extends DefaultJsonProtocol {
             segment_id, segment_type, segment_name, sql, update_frequency, detail, description,
             create_time, update_time, creator, is_focus, tickets)
 
-        case _ => throw DeserializationException("Tag Dictionary Json formatted error.")
+        case _ => throw DeserializationException("Segment Dictionary Json formatted error.")
       }
     }
   }
