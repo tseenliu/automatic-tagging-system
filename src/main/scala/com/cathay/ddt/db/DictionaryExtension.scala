@@ -18,6 +18,7 @@ class DictionaryExtension {
       "description" -> ctd.description,
       "create_time" -> ctd.create_time,
       "update_time" -> ctd.update_time,
+      "disable_flag" -> ctd.disable_flag,
       "creator" -> ctd.creator,
       "is_focus" -> ctd.is_focus,
       "tickets" -> ctd.tickets)
@@ -34,6 +35,7 @@ class DictionaryExtension {
       doc.getAs[String]("description").get,
       doc.getAs[String]("create_time").get,
       doc.getAs[String]("update_time").get,
+      doc.getAs[Boolean]("disable_flag"),
       doc.getAs[String]("creator").get,
       doc.getAs[Boolean]("is_focus").get,
       doc.getAs[List[String]]("tickets").toList.flatten)
