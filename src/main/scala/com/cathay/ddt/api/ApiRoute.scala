@@ -38,6 +38,7 @@ trait ApiRoute extends EnvLoader{
       dtd.description.get,
       dtd.create_time.get,
       dtd.update_time.get,
+      dtd.disable_flag,
       dtd.creator.get,
       dtd.is_focus.get,
       dtd.tickets.get
@@ -58,7 +59,7 @@ trait ApiRoute extends EnvLoader{
   }
 
   val route = handleExceptions(myExceptionHandler) {
-    val tagManagerSelection: ActorSelection =
+    val segmentManagerSelection: ActorSelection =
       system.actorSelection(s"akka.tcp://segment@$tmHost:$tmPort/user/segment-manager")
 
     pathPrefix("segments") {
@@ -69,10 +70,10 @@ trait ApiRoute extends EnvLoader{
         (post & entity(as[DynamicSD])) { td =>
           onSuccess(MongoConnector.getCUSDCollection.flatMap(coll => MongoUtils.insert(coll, td))) {
             case true =>
-              log.info(s"Request to insert SegmentID[${td.actorID}].")
-              tagManagerSelection ! Cmd(Load(convertTD(td)))
+              log.info(s"Request to insert SegmentID[${td.actorID}].\n${convertTD(td).toJson.prettyPrint}")
+              segmentManagerSelection ! Cmd(Load(convertTD(td)))
               Thread.sleep(500)
-              tagManagerSelection ! Cmd(ShowState)
+              segmentManagerSelection ! Cmd(ShowState)
               complete(StatusCodes.OK, JsObject(
                 "message" -> JsString(s"SegmentID[${td.actorID}] insert successfully.")
               ))
@@ -92,17 +93,17 @@ trait ApiRoute extends EnvLoader{
             val query = BSONDocument("segment_id" -> id)
             onSuccess(MongoConnector.getCUSDCollection.flatMap(coll => MongoUtils.update(coll, query, td))) {
               case true =>
-                log.info(s"Request to update SegmentID[${td.actorID}].")
-                tagManagerSelection ! Cmd(Update(convertTD(td)))
+                log.info(s"Request to update SegmentID[${td.actorID}].\n${convertTD(td).toJson.prettyPrint}")
+                segmentManagerSelection ! Cmd(Update(convertTD(td)))
                 Thread.sleep(500)
-                tagManagerSelection ! Cmd(ShowState)
+                segmentManagerSelection ! Cmd(ShowState)
                 complete(StatusCodes.OK, JsObject(
                   "message" -> JsString(s"SegmentID[${td.actorID}] update successfully.")
                 ))
               case false =>
                 log.error(s"Request to update SegmentID[${td.actorID}].")
                 complete(StatusCodes.BadRequest, JsObject(
-                  "message" -> JsString("SegmentID[${td.tag_id}] update failed.")
+                  "message" -> JsString(s"SegmentID[${td.actorID}] update failed.")
                 ))
             }
           }
@@ -137,9 +138,9 @@ trait ApiRoute extends EnvLoader{
               onSuccess(MongoConnector.getCUSDCollection.flatMap(coll => MongoUtils.remove(coll, BSONDocument("segment_id" -> id)))) {
                 case true =>
                   log.info(s"Request to remove SegmentID[$id].")
-                  tagManagerSelection ! Cmd(Remove(id))
+                  segmentManagerSelection ! Cmd(Remove(id))
                   Thread.sleep(500)
-                  tagManagerSelection ! Cmd(ShowState)
+                  segmentManagerSelection ! Cmd(ShowState)
                   complete(StatusCodes.OK, JsObject(
                     "message" -> JsString(s"SegmentID[${id}] remove successfully.")
                   ))
@@ -161,14 +162,14 @@ trait ApiRoute extends EnvLoader{
           (get) {
             complete {
               import com.cathay.ddt.tagging.protocal.DynamicSDProtocol._
-              log.info(s"Request to get tags.")
+              log.info(s"Request to get all segments.")
               val ListTD = MongoConnector.getCUSDCollection.flatMap(coll => MongoUtils.findDictionaries(coll, BSONDocument()))
               OK -> ListTD
             }
           }
         }
     } ~
-      pathPrefix("history") {
+      pathPrefix("segments_history") {
         import com.cathay.ddt.tagging.protocal.SDProtocol._
         import com.cathay.ddt.tagging.protocal.DynamicSDProtocol._
         pathEnd {
@@ -176,15 +177,15 @@ trait ApiRoute extends EnvLoader{
           (post & entity(as[DynamicSD])) { td =>
             onSuccess(MongoConnector.getHCUSDCollection.flatMap(coll => MongoUtils.insert(coll, td))) {
               case true =>
-                log.info(s"Request to insert SegmentID[${td.actorID}].")
-                tagManagerSelection ! Cmd(Load(convertTD(td)))
+                log.info(s"Request to insert SegmentID[${td.actorID}].\n${convertTD(td).toJson.prettyPrint}")
+                segmentManagerSelection ! Cmd(Load(convertTD(td)))
                 complete(StatusCodes.OK, JsObject(
                   "message" -> JsString(s"SegmentID[${td.actorID}] insert successfully.")
                 ))
               case false =>
                 log.error(s"Request to insert SegmentID[${td.actorID}].")
                 complete(StatusCodes.BadRequest, JsObject(
-                  "message" -> JsString("SegmentID[${td.tag_id}] insert failed.")
+                  "message" -> JsString(s"SegmentID[${td.actorID}] insert failed.")
                 ))
             }
           }
@@ -197,8 +198,8 @@ trait ApiRoute extends EnvLoader{
                 val query = BSONDocument("segment_id" -> id)
                 onSuccess(MongoConnector.getHCUSDCollection.flatMap(coll => MongoUtils.update(coll, query, td))) {
                   case true =>
-                    log.info(s"Request to update SegmentID[${td.actorID}].")
-                    tagManagerSelection ! Cmd(Update(convertTD(td)))
+                    log.info(s"Request to update SegmentID[${td.actorID}]\n${convertTD(td).toJson.prettyPrint}.")
+                    segmentManagerSelection ! Cmd(Update(convertTD(td)))
                     complete(StatusCodes.OK, JsObject(
                       "message" -> JsString(s"SegmentID[${td.actorID}] update successfully.")
                     ))
@@ -240,7 +241,7 @@ trait ApiRoute extends EnvLoader{
                 onSuccess(MongoConnector.getHCUSDCollection.flatMap(coll => MongoUtils.remove(coll, BSONDocument("segment_id" -> id)))) {
                   case true =>
                     log.info(s"Request to remove SegmentID[$id].")
-                    tagManagerSelection ! Cmd(Remove(id))
+                    segmentManagerSelection ! Cmd(Remove(id))
                     complete(StatusCodes.OK, JsObject(
                       "message" -> JsString(s"SegmentID[${id}] remove successfully.")
                     ))
@@ -262,7 +263,7 @@ trait ApiRoute extends EnvLoader{
             (get) {
               complete {
                 import com.cathay.ddt.tagging.protocal.DynamicSDProtocol._
-                log.info(s"Request to get tags.")
+                log.info(s"Request to get all segments.")
                 val ListTD = MongoConnector.getHCUSDCollection.flatMap(coll => MongoUtils.findDictionaries(coll, BSONDocument()))
                 OK -> ListTD
               }

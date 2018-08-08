@@ -29,6 +29,7 @@
     </root>
 
     <logger name="org.mongodb.driver" level="ERROR"/>
+    <logger name="reactivemongo.api.MongoDriver" level="ERROR"/>
     <logger name="reactivemongo.core.actors" level="ERROR"/>
     <logger name="reactivemongo.core.nodeset" level="ERROR"/>
     <logger name="reactivemongo.api.MongoConnection" level="ERROR"/>

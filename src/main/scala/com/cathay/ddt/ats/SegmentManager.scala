@@ -32,17 +32,17 @@ object SegmentManager extends EnvLoader {
 
   def initiate: ActorRef = {
     val system = ActorSystem("segment", config.getConfig("ats.TagManager"))
-    val tagManager = system.actorOf(Props[SegmentManager], name="segment-manager")
-    initialDictionary(tagManager)
-    tagManager
+    val segmentManager = system.actorOf(Props[SegmentManager], name="segment-manager")
+    initialDictionary(segmentManager)
+    segmentManager
   }
 
-  def initialDictionary(tagManager: ActorRef): Future[Unit] = {
+  def initialDictionary(segmentManager: ActorRef): Future[Unit] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     // load customer dictionary
     val query = BSONDocument()
     MongoConnector.getCUSDCollection.flatMap(tagColl => MongoUtils.findDictionaries(tagColl, query)).map { docList =>
-      docList.foreach(TD => tagManager ! Cmd(Load(TD)))
+      docList.foreach(TD => segmentManager ! Cmd(Load(TD)))
     }
   }
 
@@ -240,8 +240,8 @@ object SegmentManager extends EnvLoader {
     }
 
     def ShowTagInfo(): Unit = {
-      log.info(s"Tag Dictionary loading finished." +
-        s" Total Tags:${tagInstReg.getNumsOfTags}, Total Tables:${tagMesReg.getNumsOfTables}\n")
+      log.info(s"Segment Dictionary loading finished." +
+        s" Total Segments:${tagInstReg.getNumsOfTags}, Total Tables:${tagMesReg.getNumsOfTables}\n")
     }
   }
 
@@ -320,14 +320,14 @@ class SegmentManager extends PersistentActor with CalendarConverter {
   // Persistent receive on recovery mood
   val receiveRecover: Receive = {
     case evt: Evt =>
-      log.info(s"TagManager receive $evt on recovering mood")
+      log.info(s"SegmentManager receive $evt on recovering mood")
       updateState(evt)
     case SnapshotOffer(_, snapshot: State) =>
-      log.info(s"TagManager receive snapshot with data: $snapshot on recovering mood")
+      log.info(s"SegmentManager receive snapshot with data: $snapshot on recovering mood")
       state = snapshot
     case RecoveryCompleted =>
       state = state.initActors(createActor)
-      log.info(s"Recovery Complete and Now TagManager swtich to receiving mode :)")
+      log.info(s"Recovery Complete and Now SegmentManager switch to receiving mode :)")
 
   }
 

@@ -23,7 +23,7 @@ object MongoUtils extends DictionaryExtension {
 
     writeRes.onComplete { // Dummy callbacks
       case Failure(e) => log.error(s"${e.printStackTrace().toString}")
-      case Success(writeResult) => log.info(s"successfully inserted document with result: $writeResult")
+      case Success(writeResult) => //log.info(s"successfully inserted document with result: $writeResult")
     }
     writeRes.map(result => result.ok)
     //writeRes.map(_ => {}) // in this example, do nothing with the success
@@ -36,7 +36,7 @@ object MongoUtils extends DictionaryExtension {
     val writeRes: Future[WriteResult] = coll.insert(td)
     writeRes.onComplete { // Dummy callbacks
       case Failure(e) => log.error(s"${e.printStackTrace().toString}")
-      case Success(writeResult) => log.info(s"successfully inserted document with result: $writeResult")
+      case Success(writeResult) => // log.info(s"successfully inserted document with result: $writeResult")
     }
     writeRes.map(_.ok)
   }
@@ -46,7 +46,7 @@ object MongoUtils extends DictionaryExtension {
     val writeRes: Future[WriteResult] = coll.insert(td)
     writeRes.onComplete { // Dummy callbacks
       case Failure(e) => log.error(s"${e.printStackTrace().toString}")
-      case Success(writeResult) => log.info(s"successfully inserted document with result: $writeResult")
+      case Success(writeResult) => // log.info(s"successfully inserted document with result: $writeResult")
     }
     writeRes.map(_.ok)
   }
@@ -58,7 +58,7 @@ object MongoUtils extends DictionaryExtension {
 
     futureUpdate.onComplete { // Dummy callbacks
       case Failure(e) => log.error(s"${e.printStackTrace().toString}")
-      case Success(writeResult) => log.info(s"successfully updated document with result: $writeResult")
+      case Success(writeResult) => // log.info(s"successfully updated document with result: $writeResult")
     }
     futureUpdate.map(result => result.ok)
   }
@@ -78,7 +78,7 @@ object MongoUtils extends DictionaryExtension {
 
     futureRemove.onComplete { // callback
       case Failure(e) => log.error(s"${e.printStackTrace().toString}")
-      case Success(writeResult) => log.info(s"successfully removed document with result: $writeResult")
+      case Success(writeResult) => // log.info(s"successfully removed document with result: $writeResult")
     }
     futureRemove.map(_.ok)
   }

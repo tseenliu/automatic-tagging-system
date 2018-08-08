@@ -43,17 +43,17 @@ object SDProtocol extends DefaultJsonProtocol {
         "is_focus") match {
         case Seq(
         JsString(segment_id), JsString(segment_type), JsString(segment_name), JsString(sql), JsString(update_frequency), JsString(detail),
-        JsString(description), JsString(create_time), JsString(update_time), JsString(creator), JsBoolean(is_focus)) =>
+        JsString(description), JsString(create_time), JsString(update_time), JsBoolean(disable_flag), JsString(creator), JsBoolean(is_focus)) =>
           SegmentDictionary(
             segment_id, segment_type, segment_name, sql, update_frequency, detail, description,
-            create_time, update_time, creator, is_focus, tickets)
+            create_time, update_time, Some(disable_flag), creator, is_focus, tickets)
 
         case Seq(
         JsString(segment_id), JsString(segment_type), JsString(segment_name), JsString(sql), JsString(update_frequency), JsString(detail),
-        JsString(description), JsString(create_time), JsString(update_time), JsString(creator), JsBoolean(is_focus)) =>
+        JsString(description), JsString(create_time), JsString(update_time), JsNull, JsString(creator), JsBoolean(is_focus)) =>
           SegmentDictionary(
             segment_id, segment_type, segment_name, sql, update_frequency, detail, description,
-            create_time, update_time, creator, is_focus, tickets)
+            create_time, update_time, None, creator, is_focus, tickets)
 
         case _ => throw DeserializationException("Segment Dictionary Json formatted error.")
       }

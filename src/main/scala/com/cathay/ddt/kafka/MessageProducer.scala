@@ -57,7 +57,7 @@ class MessageProducer extends CalendarConverter {
         messages)
     val record = KafkaProducerRecord(publishTopic, Some("tagKey"), s"${fMessage.toJson.prettyPrint}")
     producer.send(record)
-    log.info(s"Tag(${ctd.update_frequency}) ID[${ctd.actorID}] is producing finished topic.")
+    log.info(s"Segment(${ctd.update_frequency}) ID[${ctd.actorID}] is producing finished topic.")
   }
 
 }

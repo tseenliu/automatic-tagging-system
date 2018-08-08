@@ -29,7 +29,7 @@ class TaggingRunner extends Actor with CalendarConverter{
       val startTime = getCalendar.getTimeInMillis/1000
       log.info(s"ActorRef: ${self} received Message by TagScheduler.")
       //sender tagState to produce start message
-      context.actorSelection(s"/user/tag-manager/${msg.instance.composeCd.actorID}") ! Report(Start, startTime, msg.instance.composeCd)
+      context.actorSelection(s"/user/segment-manager/${msg.instance.composeCd.actorID}") ! Report(Start, startTime, msg.instance.composeCd)
       val command = Seq("/bin/bash", s"$runPath", "--job-name", s"${msg.instance.composeCd.actorID}", "-p", s"$TMP_FILE_PATH${msg.instance.composeCd.actorID}_$getCurrentDate")
 
       val stdout = new StringBuilder

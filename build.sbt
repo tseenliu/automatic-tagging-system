@@ -1,5 +1,5 @@
 
-name := "automatic-tagging-system"
+name := "automatic-segment-system"
 
 version := "1.0"
 
