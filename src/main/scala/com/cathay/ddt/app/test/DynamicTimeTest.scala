@@ -24,12 +24,12 @@ object DynamicTimeTest extends App with CalendarConverter {
 
   val resetDay =
     etlTime.compareTo("00:00:00") match {
-      case 0 =>
-        numsOfDelayDate.abs.toString
       case _ =>
-        if((numsOfDelayDate.abs-1).toString.length == 1)
-          s"0${(numsOfDelayDate.abs-1).toString}"
-        else (numsOfDelayDate.abs-1).toString
+        numsOfDelayDate.abs.toString
+//      case _ =>
+//        if((numsOfDelayDate.abs-1).toString.length == 1)
+//          s"0${(numsOfDelayDate.abs-1).toString}"
+//        else (numsOfDelayDate.abs-1).toString
     }
 
   def getRealDate(partitionValue: String): String = {
@@ -69,5 +69,8 @@ object DynamicTimeTest extends App with CalendarConverter {
   val pv = getCalendar
   pv.add(Calendar.DATE, numsOfDelayDate)
 
-  println(getAdwDay("201805"))
+  println(resetDay)
+  println(numsOfDelayDate.abs)
+
+  println(numsOfDelayDate.abs-1)
 }

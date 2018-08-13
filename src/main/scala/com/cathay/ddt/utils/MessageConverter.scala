@@ -60,14 +60,8 @@ object MessageConverter extends CalendarConverter {
   def getMessages(sql: String): Iterator[Message] = {
     val tablePattern = "(VP_BANK|vp_bank)\\.([a-z\\-\\_A-Z0-9]+)".r
     val matches = tablePattern.findAllIn(sql)
-    //    val tagPattern = s"""([tag_id\\s]+)\\=(["'\\s]+)([\\-\\_a-zA-Z0-9]+)(["'\\s]+)""".r
-    //    val matches = tagPattern.findAllIn(sql)
     val map = getSqlMTable
     var set = scala.collection.mutable.Set[Message]()
-//    matches.foreach{ x =>
-//      val tagPattern(a,b,c,d) = x
-//      set += map(c)
-//    }
     matches.foreach{ x =>
       val table = x.trim.split("\\.")(1)
       try {

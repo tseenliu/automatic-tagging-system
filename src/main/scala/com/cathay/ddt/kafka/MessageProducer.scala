@@ -31,7 +31,7 @@ class MessageProducer extends CalendarConverter {
     val sMessage =
       StartMessage(
         tagName,
-        ctd.tag_name,
+        ctd.actorID,
         s"${ctd.actorID}_$startTime",
         messages,
         startTime)
@@ -47,7 +47,7 @@ class MessageProducer extends CalendarConverter {
       FinishMessage(
         tagName,
         ctd.actorID,
-        ctd.tag_name,
+        ctd.actorID,
         s"${ctd.actorID}_$startTime",
         ctd.update_frequency,
         getCurrentDate,

@@ -23,18 +23,21 @@
         <!--</triggeringPolicy>-->
     </appender>
 
-    <root level="info">
+    <root level="INFO">
         <appender-ref ref="FILE" />
         <appender-ref ref="STDOUT" />
     </root>
 
-    <logger name="org.mongodb.driver" level="ERROR"/>
-    <logger name="reactivemongo.core.actors" level="ERROR"/>
-    <logger name="reactivemongo.core.nodeset" level="ERROR"/>
-    <logger name="reactivemongo.api.MongoConnection" level="ERROR"/>
-    <logger name="io.swagger" level="ERROR"/>
-    <logger name="ch.qos.logback" level="ERROR"/>
+    <logger name="org.mongodb.driver" level="ERROR" />
+    <logger name="reactivemongo.core.actors" level="ERROR" />
+    <logger name="reactivemongo.core.nodeset" level="ERROR" />
+    <logger name="reactivemongo.api.MongoConnection" level="ERROR" />
+    <logger name="io.swagger" level="ERROR" />
+    <logger name="ch.qos.logback" level="ERROR" />
+    <logger name="org.apache.kafka.clients.consumer.ConsumerConfig" level="INFO" />
 
-    <logger name="o.a.k.c.consumer.ConsumerConfig" level="ERROR" additivity="true" />
+    <logger name="org.apache.hadoop.fs.FileSystem" level="DEBUG" />
+
+
 
 </configuration>

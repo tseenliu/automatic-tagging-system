@@ -10,6 +10,7 @@ import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.ExceptionHandler
+import com.cathay.ddt.app.BootTagManager
 import com.cathay.ddt.ats.TagManager._
 import com.cathay.ddt.tagging.schema.{DynamicTD, QueryTD, TagDictionary}
 import com.cathay.ddt.utils.EnvLoader
@@ -76,13 +77,20 @@ trait ApiRoute extends EnvLoader{
         (post & entity(as[DynamicTD])) { td =>
           onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.insert(coll, td))) {
             case true =>
-              log.info(s"Request to insert tagID[${td.tag_id}].")
-              tagManagerSelection ! Cmd(Load(convertTD(td)))
-              Thread.sleep(500)
-              tagManagerSelection ! Cmd(ShowState)
-              complete(StatusCodes.OK, JsObject(
-                "message" -> JsString(s"tagID[${td.tag_id}] insert successfully.")
-              ))
+              if(td.system_name.getOrElse("none").equalsIgnoreCase(BootTagManager.systemName)) {
+                log.info(s"Request to insert tagID[${td.tag_id}].")
+                tagManagerSelection ! Cmd(Load(convertTD(td)))
+                Thread.sleep(500)
+                tagManagerSelection ! Cmd(ShowState)
+                complete(StatusCodes.OK, JsObject(
+                  "message" -> JsString(s"tagID[${td.tag_id}] insert successfully.")
+                ))
+              } else {
+                log.warn(s"Request to insert tagID[${td.tag_id}]: [${td.system_name}] not a ATS.")
+                complete(StatusCodes.NotFound, JsObject(
+                  "message" -> JsString(s"tagID[${td.system_name}] not a ATS.")
+                ))
+              }
             case false =>
               log.error(s"Request to insert tagID[${td.tag_id}].")
               complete(StatusCodes.BadRequest, JsObject(
@@ -99,17 +107,25 @@ trait ApiRoute extends EnvLoader{
             val query = BSONDocument("tag_id" -> id)
             onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.update(coll, query, td))) {
               case true =>
-                log.info(s"Request to update tagID[${td.tag_id}].")
-                tagManagerSelection ! Cmd(Update(convertTD(td)))
-                Thread.sleep(500)
-                tagManagerSelection ! Cmd(ShowState)
-                complete(StatusCodes.OK, JsObject(
-                  "message" -> JsString(s"tagID[${td.tag_id}] update successfully.")
-                ))
+                if(td.system_name.getOrElse("none").equalsIgnoreCase("ATS")) {
+                  log.info(s"Request to update tagID[${td.tag_id}].")
+                  tagManagerSelection ! Cmd(Update(convertTD(td)))
+                  Thread.sleep(500)
+                  tagManagerSelection ! Cmd(ShowState)
+                  complete(StatusCodes.OK, JsObject(
+                    "message" -> JsString(s"tagID[${td.tag_id}] update successfully.")
+                  ))
+                } else {
+                  log.error(s"Request to update tagID[${td.tag_id}]: [${td.system_name}] not a ATS.")
+                  complete(StatusCodes.NotFound, JsObject(
+                    "message" -> JsString(s"tagID[${td.tag_id}]: [${td.system_name}] not a ATS.")
+                  ))
+                }
+
               case false =>
                 log.error(s"Request to update tagID[${td.tag_id}].")
                 complete(StatusCodes.BadRequest, JsObject(
-                  "message" -> JsString("tagID[${td.tag_id}] update failed.")
+                  "message" -> JsString(s"tagID[${td.tag_id}] update failed.")
                 ))
             }
           }
@@ -184,7 +200,6 @@ trait ApiRoute extends EnvLoader{
             onSuccess(MongoConnector.getHTDCollection.flatMap(coll => MongoUtils.insert(coll, td))) {
               case true =>
                 log.info(s"Request to insert tagID[${td.tag_id}].")
-                tagManagerSelection ! Cmd(Load(convertTD(td)))
                 complete(StatusCodes.OK, JsObject(
                   "message" -> JsString(s"tagID[${td.tag_id}] insert successfully.")
                 ))
@@ -205,7 +220,6 @@ trait ApiRoute extends EnvLoader{
                 onSuccess(MongoConnector.getHTDCollection.flatMap(coll => MongoUtils.update(coll, query, td))) {
                   case true =>
                     log.info(s"Request to update tagID[${td.tag_id}].")
-                    tagManagerSelection ! Cmd(Update(convertTD(td)))
                     complete(StatusCodes.OK, JsObject(
                       "message" -> JsString(s"tagID[${td.tag_id}] update successfully.")
                     ))
@@ -247,7 +261,6 @@ trait ApiRoute extends EnvLoader{
                 onSuccess(MongoConnector.getHTDCollection.flatMap(coll => MongoUtils.remove(coll, BSONDocument("tag_id" -> id)))) {
                   case true =>
                     log.info(s"Request to remove tagID[$id].")
-                    tagManagerSelection ! Cmd(Remove(id))
                     complete(StatusCodes.OK, JsObject(
                       "message" -> JsString(s"tagID[${id}] remove successfully.")
                     ))

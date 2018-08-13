@@ -11,6 +11,7 @@ import org.slf4j.{Logger, LoggerFactory}
 object BootTagManager extends App with EnvLoader {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
+  val systemName = "ATS"
 
   try
   {
