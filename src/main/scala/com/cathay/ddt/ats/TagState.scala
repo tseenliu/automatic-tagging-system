@@ -247,7 +247,7 @@ class TagState(frequency: String, id: String, schedulerActor: ActorRef) extends 
         frequencyType match {
           case Daily => Metadata(currentData.requiredMessages, resetDaily, currentData.monthly)
           case Monthly =>
-            val updateCd = Metadata(currentData.requiredMessages, resetDaily, resetMonthly)
+            val updateCd = Metadata(currentData.requiredMessages, resetDaily, currentData.monthly)
             updateCd.monthlyAlreadyRun = currentData.asInstanceOf[Metadata].monthlyAlreadyRun
             updateCd
         }

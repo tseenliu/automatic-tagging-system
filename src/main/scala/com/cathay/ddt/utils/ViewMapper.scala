@@ -20,7 +20,7 @@ class ViewMapper {
     val ParsingSQLCommand: String = {
       s"""
          |select
-         |view_id, db_id, table_id, year_ind, month_ind, day_ind, ref_ind, partition_id, disabled_ind
+         |explode(split(view_id, '/')) as view, db_id, table_id, year_ind, month_ind, day_ind, ref_ind, partition_id, disabled_ind
          |from $VIEW_TABLE
         """.stripMargin
       }
