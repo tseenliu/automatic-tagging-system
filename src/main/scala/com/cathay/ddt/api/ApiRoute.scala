@@ -191,7 +191,7 @@ trait ApiRoute extends EnvLoader{
           }
         }
     } ~
-      pathPrefix("history") {
+      pathPrefix("tags_history") {
         import com.cathay.ddt.tagging.protocal.TDProtocol._
         import com.cathay.ddt.tagging.protocal.DynamicTDProtocol._
         pathEnd {
