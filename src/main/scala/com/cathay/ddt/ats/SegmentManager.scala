@@ -402,7 +402,7 @@ class SegmentManager extends PersistentActor with CalendarConverter {
 
     case Cmd(ShowState) =>
       state.ShowTagInfo()
-      println(s"The Current state of counter is $state")
+//      println(s"The Current state of counter is $state")
 
     case SaveSnapshotSuccess(metadata) =>
 //      println(s"save snapshot succeed.")
