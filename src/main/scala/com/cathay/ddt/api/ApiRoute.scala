@@ -83,7 +83,7 @@ trait ApiRoute extends EnvLoader{
                 Thread.sleep(500)
                 tagManagerSelection ! Cmd(ShowState)
                 complete(StatusCodes.OK, JsObject(
-                  "message" -> JsString(s"tagID[${td.tag_id}] insert successfully.")
+                  "message" -> JsString(s"tagID[${td.tag_id}] insert successfully.\n${convertTD(td).toJson.prettyPrint}")
                 ))
               } else {
                 log.warn(s"Request to insert tagID[${td.tag_id}]: [${td.system_name}] not a ATS.")
@@ -108,7 +108,7 @@ trait ApiRoute extends EnvLoader{
             onSuccess(MongoConnector.getTDCollection.flatMap(coll => MongoUtils.update(coll, query, td))) {
               case true =>
                 if(td.system_name.getOrElse("none").equalsIgnoreCase("ATS")) {
-                  log.info(s"Request to update tagID[${td.tag_id}].")
+                  log.info(s"Request to update tagID[${td.tag_id}].\n${convertTD(td).toJson.prettyPrint}")
                   tagManagerSelection ! Cmd(Update(convertTD(td)))
                   Thread.sleep(500)
                   tagManagerSelection ! Cmd(ShowState)
@@ -201,7 +201,7 @@ trait ApiRoute extends EnvLoader{
               case true =>
                 log.info(s"Request to insert tagID[${td.tag_id}].")
                 complete(StatusCodes.OK, JsObject(
-                  "message" -> JsString(s"tagID[${td.tag_id}] insert successfully.")
+                  "message" -> JsString(s"tagID[${td.tag_id}] insert successfully.\n${convertTD(td).toJson.prettyPrint}")
                 ))
               case false =>
                 log.error(s"Request to insert tagID[${td.tag_id}].")
@@ -221,7 +221,7 @@ trait ApiRoute extends EnvLoader{
                   case true =>
                     log.info(s"Request to update tagID[${td.tag_id}].")
                     complete(StatusCodes.OK, JsObject(
-                      "message" -> JsString(s"tagID[${td.tag_id}] update successfully.")
+                      "message" -> JsString(s"tagID[${td.tag_id}] update successfully.\n${convertTD(td).toJson.prettyPrint}")
                     ))
                   case false =>
                     log.error(s"Request to update tagID[${td.tag_id}].")
