@@ -31,13 +31,13 @@ class MessageProducer extends CalendarConverter {
     val sMessage =
       StartMessage(
         tagName,
-        ctd.segment_name,
+        ctd.actorID,
         s"${ctd.actorID}_$startTime",
         messages,
         startTime)
-    val record = KafkaProducerRecord(startTopic, Some("tagKey"), s"${sMessage.toJson.prettyPrint}")
+    val record = KafkaProducerRecord(startTopic, Some("SegmentKey"), s"${sMessage.toJson.prettyPrint}")
     producer.send(record)
-    log.info(s"Tag(${ctd.update_frequency}) ID[${ctd.actorID}] is producing started topic.")
+    log.info(s"Segment(${ctd.update_frequency}) ID[${ctd.actorID}] is producing started topic.")
   }
 
   def sendToFinishTopic(startTime: Long, ctd: ComposeSD, messages: List[TM2Show], is_success: Boolean): Unit = {
@@ -47,7 +47,7 @@ class MessageProducer extends CalendarConverter {
       FinishMessage(
         tagName,
         ctd.actorID,
-        ctd.segment_name,
+        ctd.actorID,
         s"${ctd.actorID}_$startTime",
         ctd.update_frequency,
         getCurrentDate,
@@ -55,7 +55,7 @@ class MessageProducer extends CalendarConverter {
         finishTime,
         is_success,
         messages)
-    val record = KafkaProducerRecord(publishTopic, Some("tagKey"), s"${fMessage.toJson.prettyPrint}")
+    val record = KafkaProducerRecord(publishTopic, Some("SegmentKey"), s"${fMessage.toJson.prettyPrint}")
     producer.send(record)
     log.info(s"Segment(${ctd.update_frequency}) ID[${ctd.actorID}] is producing finished topic.")
   }

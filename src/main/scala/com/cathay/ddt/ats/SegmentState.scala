@@ -90,7 +90,7 @@ object SegmentState {
     var rerty: Int = 0
     override def toString: String = {
       s"===================================================================" +
-        s"\nRequired: $requiredMessages\nDaily: $daily\nMonthly[${monthlyAlreadyRun.getOrElse("None")}]: $monthly\n"
+        s"\nRequired: $requiredMessages\nDaily: $daily\nMonthly: $monthly\n"
     }
   }
 
@@ -113,6 +113,8 @@ object SegmentState {
   case class Reset(`type`: FrequencyType) extends DomainEvent
 
   case object ResetRanMonthly extends DomainEvent
+
+  case object ResetNotCurrentDayandMonth extends DomainEvent
 
 
   // Frequency Types
@@ -209,15 +211,24 @@ class SegmentState(frequency: String, id: String, schedulerActor: ActorRef) exte
         }
 
       case ReceivedMessage(tm, Daily) =>
-        if(tm.partition_fields.isDefined && tm.partition_values.isDefined) {
-          Metadata(currentData.requiredMessages, currentData.daily - convertTM(tm) + (tm -> true), currentData.monthly)
+        if(tm.partition_fields.isDefined && tm.partition_values.get.contains(getDailyDate)) {
+          // partition
+          val newMd = Metadata(currentData.requiredMessages, currentData.daily - convertTM(tm) + (tm -> true), currentData.monthly)
+          newMd.monthlyAlreadyRun = currentData.asInstanceOf[Metadata].monthlyAlreadyRun
+          newMd
+        }else if(tm.partition_fields.isEmpty && tm.partition_values.isEmpty){
+          // rd_XXX
+          val newMd = Metadata(currentData.requiredMessages, currentData.daily - convertTM(tm) + (tm -> true), currentData.monthly)
+          newMd.monthlyAlreadyRun = currentData.asInstanceOf[Metadata].monthlyAlreadyRun
+          newMd
         } else currentData
 
-
       case ReceivedMessage(tm, Monthly) =>
-        if(tm.partition_fields.isDefined && tm.partition_values.isDefined)
-          Metadata(currentData.requiredMessages, currentData.daily, currentData.monthly - convertTM(tm) + (tm -> true))
-        else currentData
+        if(tm.partition_fields.isDefined && tm.partition_values.get.contains(getLastMonth)) {
+          val newMd = Metadata(currentData.requiredMessages, currentData.daily, currentData.monthly - convertTM(tm) + (tm -> true))
+          newMd.monthlyAlreadyRun = currentData.asInstanceOf[Metadata].monthlyAlreadyRun
+          newMd
+        } else currentData
 
       case UpdatedMessages(Daily) =>
         if (currentData.monthly.nonEmpty & currentData.daily.nonEmpty) {
@@ -234,14 +245,25 @@ class SegmentState(frequency: String, id: String, schedulerActor: ActorRef) exte
       case Reset(frequencyType) =>
         frequencyType match {
           case Daily => Metadata(currentData.requiredMessages, resetDaily, currentData.monthly)
-          case Monthly => Metadata(currentData.requiredMessages, resetDaily, resetMonthly)
+          case Monthly => Metadata(currentData.requiredMessages, resetDaily, currentData.monthly)
         }
 
       case ResetRanMonthly =>
         currentData.asInstanceOf[Metadata].monthlyAlreadyRun = None
         currentData
 
+      case ResetNotCurrentDayandMonth =>
+        val daily = currentData.daily.map { x =>
+          if(x._1.partition_values.getOrElse("None").equals(getDailyDate) || x._1.partition_values.getOrElse("None").equals("None")) x
+          else convertTM(convertSTM(x._1)) -> false }
 
+        val monthly = currentData.monthly.map { x =>
+          if(x._1.partition_values.getOrElse("None").equals(getLastMonth) || x._1.partition_values.getOrElse("None").equals("None")) x
+          else convertTM(convertSTM(x._1)) -> false }
+
+        val newMd = Metadata(currentData.requiredMessages, daily, monthly)
+        newMd.monthlyAlreadyRun = currentData.asInstanceOf[Metadata].monthlyAlreadyRun
+        newMd
     }
   }
 
@@ -266,7 +288,7 @@ class SegmentState(frequency: String, id: String, schedulerActor: ActorRef) exte
         if (stateData.isNull) sender() ! false
         else sender() ! true
         saveStateSnapshot()
-        logger.info(s"Segment($freq, ID($id):\n$stateData")
+        logger.info(s"Segment($freq)[${stateData.asInstanceOf[Metadata].monthlyAlreadyRun.getOrElse("None")}], ID($id):\n$stateData")
       }
 
     case Event(Receipt(tm), _) =>
@@ -275,16 +297,16 @@ class SegmentState(frequency: String, id: String, schedulerActor: ActorRef) exte
           stay applying ReceivedMessage(tm, Daily) andThen { _ =>
             saveStateSnapshot()
             self ! Check
-            logger.info(s"Segment($freq, ID($id):\n$stateData")
+            logger.info(s"Segment($freq)[${stateData.asInstanceOf[Metadata].monthlyAlreadyRun.getOrElse("None")}], ID($id):\n$stateData")
           }
         case "M" =>
           stay applying ReceivedMessage(tm, Monthly) andThen{ _ =>
             saveStateSnapshot()
             self ! Check
-            logger.info(s"Segment($freq, ID($id):\n$stateData")
+            logger.info(s"Segment($freq)[${stateData.asInstanceOf[Metadata].monthlyAlreadyRun.getOrElse("None")}], ID($id):\n$stateData")
           }
         case _ =>
-          logger.warn(s"Segment($freq, ID($id): ${tm.update_frequency} match error.")
+          logger.warn(s"Segment($freq)[${stateData.asInstanceOf[Metadata].monthlyAlreadyRun.getOrElse("None")}], ID($id): ${tm.update_frequency} match error.")
           stay()
       }
 
@@ -297,32 +319,6 @@ class SegmentState(frequency: String, id: String, schedulerActor: ActorRef) exte
       }else {
         stay()
       }
-
-    case Event(Timeout(time), _) =>
-      if (new SimpleDateFormat("HH:mm:ss").format(getCalendar.getTime).compareTo(time) == 0) {
-        val resetDay =
-          time.compareTo("00:00:00") match {
-            case 0 =>
-              numsOfDelayDate.abs.toString
-            case _ =>
-              if((numsOfDelayDate.abs-1).toString.length == 1)
-                s"0${(numsOfDelayDate.abs-1).toString}"
-              else (numsOfDelayDate.abs-1).toString
-          }
-
-        if(getCurrentDate.split("-")(2) == resetDay) {
-          goto(Verifying) applying Reset(Monthly) andThen { _ =>
-            saveStateSnapshot()
-            self ! Check
-          }
-        } else {
-          goto(Verifying) applying Reset(Daily) andThen { _ =>
-            saveStateSnapshot()
-            self ! Check
-          }
-        }
-
-      } else stay()
   }
 
   when(Running) {
@@ -396,20 +392,6 @@ class SegmentState(frequency: String, id: String, schedulerActor: ActorRef) exte
       }else goto(Receiving) andThen { _ =>
         saveStateSnapshot()
       }
-
-    case Event(RevivalCheck, _) =>
-      if(stateData.asInstanceOf[Metadata].monthlyAlreadyRun.isEmpty) {
-        goto(Receiving)
-
-      }else if(freq == "M" && stateData.asInstanceOf[Metadata].monthlyAlreadyRun.get == getLastMonth) {
-        logger.info(s"Segment($freq) ID[$id] is already run in Month[${stateData.asInstanceOf[Metadata].monthlyAlreadyRun}].")
-        context.parent ! Cmd(StopTag(id))
-        stop()
-
-      }else {
-        goto(Receiving)
-      }
-
   }
 
   def clearPersistentData(): Unit = {
@@ -436,35 +418,52 @@ class SegmentState(frequency: String, id: String, schedulerActor: ActorRef) exte
 
   whenUnhandled {
     case Event(SaveSnapshotSuccess(metadata), _) ⇒
-//      println(stateName)
       stay()
 
     case Event(SaveSnapshotFailure(metadata, reason), _) ⇒
-//      println(s"save snapshot failed and failure is $reason")
       stay()
 
     case Event(GetStatus, _) =>
       stay() replying currentInst
 
     case Event(RevivalCheck, _) =>
-//      println(s"Tag $frequency, $id: This state $stateName don't need to Revive")
-      stay()
+      if(stateData.asInstanceOf[Metadata].monthlyAlreadyRun.isEmpty) {
+        goto(Receiving) applying ResetNotCurrentDayandMonth
 
-    case Event(Revival, _) =>
-      goto(Receiving)
+      }else if(freq == "M" && stateData.asInstanceOf[Metadata].monthlyAlreadyRun.get == getLastMonth) {
+        logger.info(s"Segment($freq) ID[$id] is already run in Month[${stateData.asInstanceOf[Metadata].monthlyAlreadyRun}].")
+        context.parent ! Cmd(StopTag(id))
+        stop()
+
+      }else goto(Receiving) applying ResetNotCurrentDayandMonth
 
     case Event(Requirement(frequency, tmSet), _) =>
-      println(s"Requirement not receive in State: $stateName")
+      println(s"Requirement not receive in $stateName State.")
       sender() ! false
       stay()
 
-    case Event(Timeout(time), _) =>
+    case Event(Receipt(tm), _) =>
+      println(s"Receipt not receive in $stateName State.")
       stay()
-  }
 
-  onTransition {
-    case Running -> Running =>
-      self ! Revival
+    case Event(Timeout(time), _) =>
+      if (new SimpleDateFormat("HH:mm:ss").format(getCalendar.getTime).compareTo(time) == 0) {
+        val resetDay =
+          if(numsOfDelayDate.abs.toString.length == 1) s"0${numsOfDelayDate.abs.toString}"
+          else numsOfDelayDate.abs.toString
+
+        if(getCurrentDate.split("-")(2) == resetDay) {
+          goto(Verifying) applying Reset(Monthly) andThen { _ =>
+            saveStateSnapshot()
+            self ! Check
+          }
+        } else {
+          goto(Verifying) applying Reset(Daily) andThen { _ =>
+            saveStateSnapshot()
+            self ! Check
+          }
+        }
+      } else stay()
   }
 
 }

@@ -6,7 +6,7 @@ import akka.stream.ActorMaterializer
 import com.cathay.ddt.api.ApiRoute
 import com.cathay.ddt.utils.EnvLoader
 
-object BootSegmentRestApi extends App with ApiRoute with EnvLoader {
+object BootSegmentApi extends App with ApiRoute with EnvLoader {
 
   val config = getConfig("api")
   val host = config.getString("api.host")

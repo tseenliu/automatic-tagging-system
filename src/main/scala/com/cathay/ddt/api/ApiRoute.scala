@@ -178,7 +178,6 @@ trait ApiRoute extends EnvLoader{
             onSuccess(MongoConnector.getHCUSDCollection.flatMap(coll => MongoUtils.insert(coll, td))) {
               case true =>
                 log.info(s"Request to insert SegmentID[${td.actorID}].\n${convertTD(td).toJson.prettyPrint}")
-                segmentManagerSelection ! Cmd(Load(convertTD(td)))
                 complete(StatusCodes.OK, JsObject(
                   "message" -> JsString(s"SegmentID[${td.actorID}] insert successfully.")
                 ))
@@ -199,7 +198,6 @@ trait ApiRoute extends EnvLoader{
                 onSuccess(MongoConnector.getHCUSDCollection.flatMap(coll => MongoUtils.update(coll, query, td))) {
                   case true =>
                     log.info(s"Request to update SegmentID[${td.actorID}]\n${convertTD(td).toJson.prettyPrint}.")
-                    segmentManagerSelection ! Cmd(Update(convertTD(td)))
                     complete(StatusCodes.OK, JsObject(
                       "message" -> JsString(s"SegmentID[${td.actorID}] update successfully.")
                     ))
@@ -241,7 +239,6 @@ trait ApiRoute extends EnvLoader{
                 onSuccess(MongoConnector.getHCUSDCollection.flatMap(coll => MongoUtils.remove(coll, BSONDocument("segment_id" -> id)))) {
                   case true =>
                     log.info(s"Request to remove SegmentID[$id].")
-                    segmentManagerSelection ! Cmd(Remove(id))
                     complete(StatusCodes.OK, JsObject(
                       "message" -> JsString(s"SegmentID[${id}] remove successfully.")
                     ))
