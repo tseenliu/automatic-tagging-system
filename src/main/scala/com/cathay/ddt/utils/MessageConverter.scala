@@ -1,5 +1,7 @@
 package com.cathay.ddt.utils
 
+import java.util.Calendar
+
 import com.cathay.ddt.kafka.FinishMessage
 import com.cathay.ddt.tagging.schema.TagMessage.{Message, SimpleTagMessage}
 import com.cathay.ddt.tagging.schema.{SegmentDictionary, TagMessage}
@@ -60,7 +62,15 @@ object MessageConverter extends CalendarConverter {
 
   // Convert finish messages to tagMessages
   def CovertToTM(topic: String, input: FinishMessage): TagMessage = {
-    TagMessage(Some(topic), input.update_frequency.toUpperCase(), input.tag_id, Some("tag_id"), Some(input.tag_id), Some(input.finish_time))
+    input.update_frequency.toUpperCase() match {
+      case "M" =>
+        val c = getCalendar
+        c.setTime(SDF.parse(input.execute_time))
+        c.add(Calendar.MONTH, numsOfDelayMonth)
+        TagMessage(Some(topic), input.update_frequency.toUpperCase(), input.tag_id, Some("tag_id"), Some(getMonthFormat(c)), Some(input.finish_time))
+      case "D" =>
+        TagMessage(Some(topic), input.update_frequency.toUpperCase(), input.tag_id, Some("tag_id"), Some(input.execute_time), Some(input.finish_time))
+    }
   }
 
   // parsing sql and get require value

@@ -38,10 +38,22 @@ case class FinishMessage(hippo_name: String, //batchetl.tagging
                          is_success: Boolean,
                          receive_msgs: List[TM2Show])
 
+case class SegmentFinishMessage(hippo_name: String, //batchetl.tagging
+                         segment_id: String, //id
+                         job_name: String, //超市購物
+                         job_id: String, //tag_id_timestamp(10)
+                         update_frequency: String,
+                         execute_time: String, // execute time
+                         duration_time: Long,
+                         finish_time: Long,
+                         is_success: Boolean,
+                         receive_msgs: List[TM2Show])
+
 object TagJsonProtocol extends DefaultJsonProtocol {
   implicit val frontierFormat: RootJsonFormat[FrontierMessage] = jsonFormat6(FrontierMessage)
   implicit val tagMessageFormat: RootJsonFormat[TM2Show] = jsonFormat6(TM2Show)
   implicit val tagFinishFormat: RootJsonFormat[FinishMessage] = jsonFormat10(FinishMessage)
+  implicit val segmentFinishFormat: RootJsonFormat[SegmentFinishMessage] = jsonFormat10(SegmentFinishMessage)
   implicit val stmFormat: RootJsonFormat[SimpleTagMessage] = jsonFormat3(SimpleTagMessage)
   implicit val startMessageFormat: RootJsonFormat[StartMessage] = jsonFormat5(StartMessage)
 }

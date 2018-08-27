@@ -44,7 +44,7 @@ class MessageProducer extends CalendarConverter {
     val finishTime = getCalendar.getTimeInMillis/1000
     val durationTime = finishTime - startTime
     val fMessage =
-      FinishMessage(
+      SegmentFinishMessage(
         tagName,
         ctd.actorID,
         ctd.actorID,

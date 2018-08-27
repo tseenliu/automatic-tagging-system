@@ -211,7 +211,7 @@ class SegmentState(frequency: String, id: String, schedulerActor: ActorRef) exte
         }
 
       case ReceivedMessage(tm, Daily) =>
-        if(tm.partition_fields.isDefined && tm.partition_values.get.contains(getDailyDate)) {
+        if(tm.partition_fields.isDefined && tm.partition_values.get.contains(getCurrentDate)) {
           // partition
           val newMd = Metadata(currentData.requiredMessages, currentData.daily - convertTM(tm) + (tm -> true), currentData.monthly)
           newMd.monthlyAlreadyRun = currentData.asInstanceOf[Metadata].monthlyAlreadyRun
@@ -254,7 +254,7 @@ class SegmentState(frequency: String, id: String, schedulerActor: ActorRef) exte
 
       case ResetNotCurrentDayandMonth =>
         val daily = currentData.daily.map { x =>
-          if(x._1.partition_values.getOrElse("None").equals(getDailyDate) || x._1.partition_values.getOrElse("None").equals("None")) x
+          if(x._1.partition_values.getOrElse("None").equals(getCurrentDate) || x._1.partition_values.getOrElse("None").equals("None")) x
           else convertTM(convertSTM(x._1)) -> false }
 
         val monthly = currentData.monthly.map { x =>
