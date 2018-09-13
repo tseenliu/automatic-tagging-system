@@ -7,7 +7,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import akka.actor.OneForOneStrategy
 import akka.actor.SupervisorStrategy.{Stop, _}
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem, Props, Timers}
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import com.cathay.ddt.kafka.MessageConsumer
 import com.cathay.ddt.tagging.schema.{TagDictionary, TagMessage}
@@ -56,6 +56,7 @@ object TagManager extends EnvLoader {
   case object GetTagStatus extends ManagerCommand
   case object ShowState extends ManagerCommand
   case class TimeChecker(time: String) extends ManagerCommand
+  case object TimeCheckerKey extends ManagerCommand
 
 
   sealed trait ManagerOperation
@@ -247,7 +248,7 @@ object TagManager extends EnvLoader {
 
 }
 
-class TagManager extends PersistentActor with CalendarConverter {
+class TagManager extends PersistentActor with CalendarConverter with Timers {
   import TagManager._
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -267,7 +268,8 @@ class TagManager extends PersistentActor with CalendarConverter {
   override def preStart(): Unit = {
     schedulerAf = context.actorOf(Props[TagScheduler], name="tag-scheduler")
     context.actorOf(Props[MessageConsumer], "messages-consumer")
-    context.system.scheduler.schedule(0 seconds, 1 seconds, self, Cmd(TimeChecker(etlTime)))
+    timers.startPeriodicTimer(TimeCheckerKey, Cmd(TimeChecker(etlTime)), 1.second)
+//    context.system.scheduler.schedule(0 seconds, 1 seconds, self, Cmd(TimeChecker(etlTime)))
     log.info(s"TagManager is [Start].")
   }
 

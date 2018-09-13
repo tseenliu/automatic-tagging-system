@@ -28,7 +28,6 @@ case class TM2Show(kafkaTopic: Option[String],
                    finish_time: Option[Long])
 
 case class FinishMessage(hippo_name: String, //batchetl.tagging
-                         tag_id: String, //id
                          job_name: String, //超市購物
                          job_id: String, //tag_id_timestamp(10)
                          update_frequency: String,
@@ -41,7 +40,7 @@ case class FinishMessage(hippo_name: String, //batchetl.tagging
 object TagJsonProtocol extends DefaultJsonProtocol {
   implicit val frontierFormat: RootJsonFormat[FrontierMessage] = jsonFormat6(FrontierMessage)
   implicit val tagMessageFormat: RootJsonFormat[TM2Show] = jsonFormat6(TM2Show)
-  implicit val tagFinishFormat: RootJsonFormat[FinishMessage] = jsonFormat10(FinishMessage)
+  implicit val tagFinishFormat: RootJsonFormat[FinishMessage] = jsonFormat9(FinishMessage)
   implicit val stmFormat: RootJsonFormat[SimpleTagMessage] = jsonFormat3(SimpleTagMessage)
   implicit val startMessageFormat: RootJsonFormat[StartMessage] = jsonFormat5(StartMessage)
 }
