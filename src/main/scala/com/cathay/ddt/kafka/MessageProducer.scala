@@ -47,7 +47,6 @@ class MessageProducer extends CalendarConverter {
       SegmentFinishMessage(
         tagName,
         ctd.actorID,
-        ctd.actorID,
         s"${ctd.actorID}_$startTime",
         ctd.update_frequency,
         getCurrentDate,
