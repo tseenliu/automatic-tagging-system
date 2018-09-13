@@ -2,7 +2,7 @@ package com.cathay.ddt.ats
 
 import java.text.SimpleDateFormat
 import scala.reflect._
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, Timers}
 import akka.persistence._
 import akka.persistence.fsm._
 import akka.persistence.fsm.PersistentFSM.FSMState
@@ -112,7 +112,7 @@ object SegmentState {
 
   case class Reset(`type`: FrequencyType) extends DomainEvent
 
-  case object ResetRanMonthly extends DomainEvent
+  case object FailedReset extends DomainEvent
 
   case object ResetNotCurrentDayandMonth extends DomainEvent
 
@@ -137,10 +137,11 @@ object SegmentState {
   case object RevivalCheck
   case object Revival
   case class Timeout(time: String)
+  case object TimeoutKey
 
 }
 
-class SegmentState(frequency: String, id: String, schedulerActor: ActorRef) extends PersistentFSM[SegmentState.State, SegmentState.Data, SegmentState.DomainEvent] with CalendarConverter {
+class SegmentState(frequency: String, id: String, schedulerActor: ActorRef) extends PersistentFSM[SegmentState.State, SegmentState.Data, SegmentState.DomainEvent] with CalendarConverter with Timers {
   import SegmentState._
 
   var freq: String = frequency
@@ -148,7 +149,8 @@ class SegmentState(frequency: String, id: String, schedulerActor: ActorRef) exte
 
   override def preStart(): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    context.system.scheduler.schedule(0 seconds, 1 seconds, self, Timeout(etlTime))
+    timers.startPeriodicTimer(TimeoutKey, Timeout(etlTime), 1.second)
+//    context.system.scheduler.schedule(0 seconds, 1 seconds, self, Timeout(etlTime))
     logger.info(s"Segment($freq), ID($id) is [UP].")
     self ! RevivalCheck
   }
@@ -245,12 +247,16 @@ class SegmentState(frequency: String, id: String, schedulerActor: ActorRef) exte
       case Reset(frequencyType) =>
         frequencyType match {
           case Daily => Metadata(currentData.requiredMessages, resetDaily, currentData.monthly)
-          case Monthly => Metadata(currentData.requiredMessages, resetDaily, currentData.monthly)
+          case Monthly =>
+            val newMd = Metadata(currentData.requiredMessages, resetDaily, resetMonthly)
+            newMd.monthlyAlreadyRun = currentData.asInstanceOf[Metadata].monthlyAlreadyRun
+            newMd
         }
 
-      case ResetRanMonthly =>
-        currentData.asInstanceOf[Metadata].monthlyAlreadyRun = None
-        currentData
+      case FailedReset =>
+        val newMd = Metadata(currentData.requiredMessages, resetDaily, currentData.monthly)
+        newMd.monthlyAlreadyRun = currentData.asInstanceOf[Metadata].monthlyAlreadyRun
+        newMd
 
       case ResetNotCurrentDayandMonth =>
         val daily = currentData.daily.map { x =>
@@ -349,10 +355,7 @@ class SegmentState(frequency: String, id: String, schedulerActor: ActorRef) exte
           if (stateData.asInstanceOf[Metadata].rerty==3) {
             MessageProducer.getProducer.sendToFinishTopic(startTime, ctd, (stateData.daily ++ stateData.monthly).keySet.map(x => convertTM2(x)).toList, is_success = false)
             logger.warn(s"Segment($freq) ID[${ctd.actorID}] is not finish and goto Receiving state.")
-            ctd.update_frequency match {
-              case "M" => goto (Receiving) applying Reset(Monthly)
-              case "D" => goto (Receiving) applying Reset(Daily)
-            }
+            goto (Receiving) applying FailedReset
           } else {
             goto(Running) andThen{ _ =>
               saveStateSnapshot()

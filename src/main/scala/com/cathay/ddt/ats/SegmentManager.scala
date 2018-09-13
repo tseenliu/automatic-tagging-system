@@ -7,7 +7,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import akka.actor.OneForOneStrategy
 import akka.actor.SupervisorStrategy._
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem, Props, Timers}
 import com.cathay.ddt.db.{MongoConnector, MongoUtils}
 import com.cathay.ddt.kafka.MessageConsumer
 import com.cathay.ddt.tagging.schema.{SegmentDictionary, TagMessage}
@@ -56,6 +56,7 @@ object SegmentManager extends EnvLoader {
   case object GetTagStatus extends ManagerCommand
   case object ShowState extends ManagerCommand
   case class TimeChecker(time: String) extends ManagerCommand
+  case object TimeCheckerKey extends ManagerCommand
 
 
   sealed trait ManagerOperation
@@ -247,7 +248,7 @@ object SegmentManager extends EnvLoader {
 
 }
 
-class SegmentManager extends PersistentActor with CalendarConverter {
+class SegmentManager extends PersistentActor with CalendarConverter with Timers {
   import SegmentManager._
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -267,7 +268,8 @@ class SegmentManager extends PersistentActor with CalendarConverter {
   override def preStart(): Unit = {
     schedulerAf = context.actorOf(Props[SegmentScheduler], name="segment-scheduler")
     context.actorOf(Props[MessageConsumer], "messages-consumer")
-    context.system.scheduler.schedule(0 seconds, 1 seconds, self, Cmd(TimeChecker(etlTime)))
+    timers.startPeriodicTimer(TimeCheckerKey, Cmd(TimeChecker(etlTime)), 1.second)
+//    context.system.scheduler.schedule(0 seconds, 1 seconds, self, Cmd(TimeChecker(etlTime)))
     log.info(s"SegmentManager is [Start].")
   }
 
@@ -410,7 +412,5 @@ class SegmentManager extends PersistentActor with CalendarConverter {
       log.error(s"save snapshot failed and failure is $reason")
 
   }
-
-
 
 }
