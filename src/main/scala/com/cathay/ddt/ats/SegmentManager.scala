@@ -248,7 +248,7 @@ object SegmentManager extends EnvLoader {
 
 }
 
-class SegmentManager extends PersistentActor with CalendarConverter with Timers {
+class SegmentManager extends Timers with PersistentActor with CalendarConverter {
   import SegmentManager._
   import scala.concurrent.ExecutionContext.Implicits.global
 
