@@ -370,10 +370,7 @@ class TagState(frequency: String, id: String, schedulerActor: ActorRef) extends 
           if (stateData.asInstanceOf[Metadata].rerty==3) {
             MessageProducer.getProducer.sendToFinishTopic(startTime, ctd, (stateData.daily ++ stateData.monthly).keySet.map(x => convertTM2(x)).toList, is_success = false)
             logger.warn(s"Tag($freq) ID[${ctd.actorID}] is not finish and goto Receiving state.")
-            ctd.update_frequency match {
-              case "M" => goto (Receiving) applying Reset(Monthly)
-              case "D" => goto (Receiving) applying Reset(Daily)
-            }
+            goto(Receiving) applying FailedReset
           } else {
             goto(Running) andThen{ _ =>
               saveStateSnapshot()
