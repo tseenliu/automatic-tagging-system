@@ -248,7 +248,7 @@ object TagManager extends EnvLoader {
 
 }
 
-class TagManager extends PersistentActor with CalendarConverter with Timers {
+class TagManager extends Timers with PersistentActor with CalendarConverter {
   import TagManager._
   import scala.concurrent.ExecutionContext.Implicits.global
 
