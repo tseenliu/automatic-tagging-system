@@ -27,11 +27,11 @@ case class TM2Show(kafkaTopic: Option[String],
                    partition_values: Option[String],
                    finish_time: Option[Long])
 
-case class FinishMessage(hippo_name: String, //batchetl.tagging
-                         job_name: String, //超市購物
-                         job_id: String, //tag_id_timestamp(10)
+case class FinishMessage(hippo_name: String,
+                         job_name: String,
+                         job_id: String,
                          update_frequency: String,
-                         execute_time: String, // execute time
+                         execute_time: String,
                          duration_time: Long,
                          finish_time: Long,
                          is_success: Boolean,

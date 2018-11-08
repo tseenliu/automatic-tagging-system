@@ -77,7 +77,6 @@ object MessageConverter extends CalendarConverter {
   def getSqlMTable: Map[String, Message] = {
     if (sqlMTable.isEmpty) {
       initialADW()
-//      initialFromLocal()
       sqlMTable
     } else {
       sqlMTable
@@ -87,27 +86,10 @@ object MessageConverter extends CalendarConverter {
   def getKafkaMTable: Map[String, String] = {
     if (kafkaMTable.isEmpty) {
       initialADW()
-//      initialFromLocal()
       kafkaMTable
     } else {
       kafkaMTable
     }
-  }
-
-  def initialFromLocal(): Unit = {
-    sqlMTable = Map()
-    kafkaMTable = Map()
-    for (line <- Source.fromFile(mappingFilePath).getLines) {
-      val record = line.trim.split(",")
-      val key = record(0)
-      val value = record(1)
-      val par = if(record(2) == "no") None else Some(record(2))
-      val tmp = value.split(" ")
-      kafkaMList += ((tmp(0), tmp(1)))
-      sqlMList += ((key, SimpleTagMessage(tmp(1), tmp(0), par)))
-    }
-    sqlMTable = sqlMList.toMap
-    kafkaMTable = kafkaMList.toMap
   }
 
   def initialADW(): Unit = {
