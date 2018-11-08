@@ -26,7 +26,6 @@ object MessageConverter extends CalendarConverter {
   var sqlMList = new ListBuffer[(String, Message)]()
   var kafkaMList = new ListBuffer[(String, String)]()
   var sqlMTable: Map[String, Message] = Map()
-//  var kafkaMTable: Map[String, String] = Map()
 
   def getRealDate(partitionValue: String): String = {
     val c = getCalendar
@@ -45,21 +44,6 @@ object MessageConverter extends CalendarConverter {
   def CovertTagMessage(doc: SegmentDictionary): Unit = { }
 
 
-  // Convert frontier messages to tagMessages
-//  def CovertToTM(topic: String, input: FrontierMessage): TagMessage = {
-//    val value = s"${input.db}.${input.table}"
-//    val frequency = getKafkaMTable(value)
-//    frequency.toUpperCase() match {
-//      case "M" =>
-//        TagMessage(Some(topic), frequency.toUpperCase(), value, Some(input.partition_fields.head), Some(input.partition_values.head), Some(input.exec_date))
-//      case "D" =>
-//        if(!input.partition_fields.contains("")
-//          && !input.partition_values.contains("")) {
-//          TagMessage(Some(topic), frequency.toUpperCase(), value, Some(input.partition_fields.head), Some(getRealDate(input.partition_values.head)), Some(input.exec_date))
-//        } else TagMessage(Some(topic), frequency.toUpperCase(), value, None, None, Some(input.exec_date))
-//    }
-//  }
-
   // Convert finish messages to tagMessages
   def CovertToTM(topic: String, input: FinishMessage): TagMessage = {
     input.update_frequency.toUpperCase() match {
@@ -75,7 +59,6 @@ object MessageConverter extends CalendarConverter {
 
   // parsing sql and get require value
   def getMessages(sql: String): Iterator[Message] = {
-    //    val tagPattern = s"""([tag_id\\s]+)\\=(["'\\s]+)([\\-\\_a-zA-Z0-9]+)(["'\\s]+)""".r
     val tagPattern = s"""(tag_id)(["'\\s\\=]+)([\\-\\_a-zA-Z0-9]+)(["']+)""".r
     val matches = tagPattern.findAllIn(sql)
 
@@ -97,37 +80,16 @@ object MessageConverter extends CalendarConverter {
   def getSqlMTable: Map[String, Message] = {
     if (sqlMTable.isEmpty) {
       initialADW()
-//      initialFromLocal()
       sqlMTable
     } else sqlMTable
 
   }
 
-//  def getKafkaMTable: Map[String, String] = {
-//    if (kafkaMTable.isEmpty) {
-//      initialADW()
-////      initialFromLocal()
-//      kafkaMTable
-//    } else kafkaMTable
-//
-//  }
-
-  def initialFromLocal(): Unit = {
-    sqlMTable = Map()
-    for (line <- Source.fromFile(mappingFilePath).getLines) {
-      val record = line.trim.split(",").map(_.trim)
-      sqlMList += ((record(0), SimpleTagMessage(record(1), record(0).trim, Some(record(2)))))
-    }
-    sqlMTable = sqlMList.toMap
-  }
-
   def initialADW(): Unit = {
     sqlMTable = Map()
-//    kafkaMTable = Map()
     val f = ViewMapper.getViewMapper.initial()
     Await.result(f, 10 second)
     sqlMTable = ViewMapper.getViewMapper.getSqlMList.toMap
-//    kafkaMTable = ViewMapper.getViewMapper.getKafkaMList.toMap
   }
 
 }

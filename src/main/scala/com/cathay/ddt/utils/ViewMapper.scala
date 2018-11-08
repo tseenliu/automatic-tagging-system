@@ -22,7 +22,6 @@ class ViewMapper {
     sqlMList += ((segement_id, SimpleTagMessage(frequency, segement_id, partition)))
   }
 
-//  def getKafkaMList: ListBuffer[(String, String)] = kafkaMList
   def getSqlMList: ListBuffer[(String, TagMessage.Message)] = sqlMList
 }
 
@@ -31,5 +30,4 @@ object ViewMapper extends EnvLoader {
   def getViewMapper: ViewMapper = viewMapper
 
   val sqlMList = new ListBuffer[(String, Message)]()
-//  val kafkaMList = new ListBuffer[(String, String)]()
 }

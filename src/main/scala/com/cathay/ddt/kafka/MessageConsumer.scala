@@ -31,7 +31,6 @@ class MessageConsumer extends Actor with EnvLoader {
   private val publishTopic = kafkaConfig.getString("tag.finishmsg-topic")
 
   val subscribe = subscribeTopics.toSet
-//  val frontier = subscribeTopics.toSet -- Set(publishTopic)
 
   // Records' type of [key, value]
   val recordsExt: Extractor[Any, ConsumerRecords[String, String]] = ConsumerRecords.extractor[String, String]
